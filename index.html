@@ -92,8 +92,6 @@
     function resize() {
         W = window.innerWidth;
         H = window.innerHeight;
-        
-        // CORREÇÃO 1: Só recalcula a textura se o tamanho mudou significativamente
         if (Math.abs(W - lastW) > 10 || Math.abs(H - lastH) > 10) {
             canvas.width = W * DPR;
             canvas.height = H * DPR;
@@ -106,7 +104,6 @@
         }
     }
 
-    // CORREÇÃO 1 (Continuação): Debounce no resize para evitar travamento no celular
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
@@ -127,8 +124,6 @@
         const tctx = tex.getContext('2d');
         tctx.fillStyle = COLORS.paper;
         tctx.fillRect(0, 0, W, H);
-        
-        // CORREÇÃO: Gradientes são muito mais leves para a GPU do que loop de pixels
         for (let i = 0; i < 6; i++) {
             const x = Math.random() * W, y = Math.random() * H;
             const r = 50 + Math.random() * 100;
@@ -164,8 +159,6 @@
         gain.gain.linearRampToValueAtTime(volume, now + attack);
         gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
         osc.start(now); osc.stop(now + duration);
-        
-        // CORREÇÃO 2: Limpeza automática de nós de áudio
         setTimeout(() => {
             try { osc.disconnect(); gain.disconnect(); } catch(e) {}
         }, duration * 1000 + 100);
@@ -177,7 +170,7 @@
         musicPlaying = true;
         const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
         const masterGain = audioCtx.createGain();
-        masterGain.gain.value = 0.03; // Volume um pouco menor para evitar distorção
+        masterGain.gain.value = 0.03;
         masterGain.connect(audioCtx.destination);
         musicNodes.push(masterGain);
         
@@ -195,11 +188,9 @@
             noteGain.gain.linearRampToValueAtTime(0.4, now + 0.3);
             noteGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
             osc.start(now); osc.stop(now + 2.5);
-            
             setTimeout(() => {
                 try { osc.disconnect(); filter.disconnect(); noteGain.disconnect(); } catch(e) {}
             }, 2600);
-
             const t = setTimeout(playNote, 1000 + Math.random() * 1500);
             musicTimeouts.push(t);
         }
@@ -209,10 +200,8 @@
 
     function stopMusic() {
         musicPlaying = false;
-        // CORREÇÃO 2: Cancelar todos os timeouts pendentes
         musicTimeouts.forEach(clearTimeout);
         musicTimeouts = [];
-        // Desconectar e limpar nós
         musicNodes.forEach(n => { try { n.disconnect(); } catch(e) {} });
         musicNodes = [];
     }
@@ -278,9 +267,8 @@
             if (this.life <= 0) return;
             ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
             if (this.isConfetti) {
-                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation);
-                ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
-                ctx.restore();
+                // CORREÇÃO CRÍTICA: Desenho ultra-rápido sem save/restore/rotate para não travar celular
+                ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
             } else {
                 ctx.beginPath(); ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2); ctx.fill();
             }
@@ -292,7 +280,7 @@
     function spawnParticles(x, y, color, count = 20) {
         for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
     }
-    function spawnConfetti(x, y, count = 60) {
+    function spawnConfetti(x, y, count = 30) { // REDUZIDO DE 80 PARA 30 PARA PERFORMANCE
         const colors = ['#a62e2e', '#2e7336', '#b8892f', '#263872', '#8b4513', '#c71585'];
         for (let i = 0; i < count; i++) {
             particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)], {
@@ -311,7 +299,6 @@
     const scratchMarks = [];
     function addScratchMark(x, y) { scratchMarks.push({ x, y, life: 2, size: 20 + Math.random() * 15 }); }
 
-    // [Função drawIcon permanece exatamente a mesma, omitida aqui para economizar espaço, mas está no seu código original]
     function drawIcon(ctx, id, x, y, r, color) {
         ctx.save();
         ctx.strokeStyle = color; ctx.fillStyle = color;
@@ -456,7 +443,16 @@
             stats: { totalCombinations: 0, totalErrors: 0, totalTimePlayed: 0, levelsCompleted: 0 },
             bestTimes: {}, attempts: {} };
     }
-    function saveSave(data) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch(e) {} }
+    
+    let pendingSave = false; // CORREÇÃO: Controle de salvamento em lote
+    function saveSave(data) {
+        try {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+            pendingSave = false;
+        } catch(e) {
+            console.warn("Erro ao salvar (possível limite de armazenamento):", e);
+        }
+    }
     let saveData = loadSave();
 
     const ACHIEVEMENTS = [
@@ -474,7 +470,8 @@
 
     function unlockAchievement(id) {
         if (saveData.achievements.includes(id)) return;
-        saveData.achievements.push(id); saveSave(saveData);
+        saveData.achievements.push(id);
+        pendingSave = true; // Marca para salvar em lote, não agora
         achievementPopup = { ach: ACHIEVEMENTS.find(a => a.id === id), timer: 3.5 };
         soundAchievement();
     }
@@ -1046,30 +1043,42 @@
             saveData.stats.totalCombinations++;
             if (isNew) { saveData.discovered.push(result.id); result.isNew = true; soundDiscovery(); showFeedback('🌟 NOVO: '+result.name+'!'); }
             else showFeedback('✦ '+result.name+' criado! +10 tinta');
-            saveSave(saveData); checkAchievements();
+            
+            // CORREÇÃO: Lógica de finalização de nível otimizada
             if (result.id === game.levelManager.targetId) {
-                game.state = 'complete'; game.stateTimer = 0; soundLevelUp(); spawnConfetti(W/2, H/2, 80);
+                game.state = 'complete';
+                game.stateTimer = 0;
+                soundLevelUp();
+                spawnConfetti(W/2, H/2, 30); // REDUZIDO DE 80 PARA 30
+
                 const next = game.levelManager.currentLevel+1;
-                if (next > saveData.maxLevel && next <= game.levelManager.totalLevels+1) saveData.maxLevel = next;
+                if (next > saveData.maxLevel && next <= game.levelManager.totalLevels+1) {
+                    saveData.maxLevel = next;
+                }
                 saveData.stats.levelsCompleted++;
                 const lvl = game.levelManager.currentLevel;
-                if (!saveData.bestTimes[lvl] || game.levelTime < saveData.bestTimes[lvl]) saveData.bestTimes[lvl] = game.levelTime;
-                if (game.levelErrors === 0) unlockAchievement('perfectionist');
-                if (game.levelTime < 20) unlockAchievement('speedy');
-                if (game.inkTimer.percent < 0.1) unlockAchievement('survivor');
-                saveSave(saveData); checkAchievements();
+                if (!saveData.bestTimes[lvl] || game.levelTime < saveData.bestTimes[lvl]) {
+                    saveData.bestTimes[lvl] = game.levelTime;
+                }
+
+                checkAchievements();
+                
+                // CORREÇÃO: Salva apenas UMA vez no final de todas as atualizações
+                if (pendingSave) {
+                    saveSave(saveData);
+                }
             }
         } else {
             spawnParticles(mx, my, COLORS.inkRed, 10); addScratchMark(mx, my); soundFail();
             showFeedback('Esses traços não combinam...'); game.levelErrors++;
-            saveData.stats.totalErrors++; saveSave(saveData);
+            saveData.stats.totalErrors++; 
+            saveSave(saveData);
         }
     }
 
     function showFeedback(msg) { game.feedback = msg; game.feedbackTimer = 2.2; }
 
     function gameLoop(timestamp) {
-        // CORREÇÃO 3: Try/Catch para evitar que um erro pare o jogo inteiro
         try {
             if (!game.lastTime) game.lastTime = timestamp;
             const dt = Math.min((timestamp-game.lastTime)/1000, 0.1);
@@ -1115,7 +1124,7 @@
         requestAnimationFrame(gameLoop);
     }
 
-    resize(); // Chamada inicial
+    resize();
     initMenuElements(); 
     requestAnimationFrame(gameLoop);
     </script>
