@@ -3,6 +3,7 @@
   "short_name": "Traços",
   "description": "Um jogo de alquimia de desenhos - combine elementos para criar novos!",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f5f2e6",
