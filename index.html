@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Traços & Tinta</title>
     
     <!-- PWA: Tornar instalável -->
@@ -25,6 +25,7 @@
             width: 100%; height: 100%; overflow: hidden;
             background: #2a2520; font-family: 'Kalam', cursive;
             touch-action: none; user-select: none; -webkit-user-select: none;
+            position: fixed; /* Previne scroll elástico no iOS que causa resize */
         }
         canvas { display: block; position: absolute; top: 0; left: 0; cursor: default; }
         #muteBtn {
@@ -50,7 +51,7 @@
 <body>
     <canvas id="game"></canvas>
     <button id="muteBtn" title="Som">🔊</button>
-    <button id="installBtn"> Instalar App</button>
+    <button id="installBtn">📲 Instalar App</button>
 
     <script>
     // ============================================
@@ -64,7 +65,6 @@
         });
     }
 
-    // Botão de instalação PWA
     let deferredPrompt;
     const installBtn = document.getElementById('installBtn');
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -87,18 +87,31 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     let W = 0, H = 0, DPR = window.devicePixelRatio || 1;
+    let lastW = 0, lastH = 0;
 
     function resize() {
         W = window.innerWidth;
         H = window.innerHeight;
-        canvas.width = W * DPR;
-        canvas.height = H * DPR;
-        canvas.style.width = W + 'px';
-        canvas.style.height = H + 'px';
-        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-        generatePaperTexture();
+        
+        // CORREÇÃO 1: Só recalcula a textura se o tamanho mudou significativamente
+        if (Math.abs(W - lastW) > 10 || Math.abs(H - lastH) > 10) {
+            canvas.width = W * DPR;
+            canvas.height = H * DPR;
+            canvas.style.width = W + 'px';
+            canvas.style.height = H + 'px';
+            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+            generatePaperTexture();
+            lastW = W;
+            lastH = H;
+        }
     }
-    window.addEventListener('resize', resize);
+
+    // CORREÇÃO 1 (Continuação): Debounce no resize para evitar travamento no celular
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(resize, 250);
+    });
 
     const COLORS = {
         paper: '#f5f2e6', paperDark: '#e8e2d0', paperLine: '#c9bfa8',
@@ -114,20 +127,13 @@
         const tctx = tex.getContext('2d');
         tctx.fillStyle = COLORS.paper;
         tctx.fillRect(0, 0, W, H);
-        const imgData = tctx.getImageData(0, 0, W, H);
-        const data = imgData.data;
-        for (let i = 0; i < data.length; i += 4) {
-            const noise = (Math.random() - 0.5) * 18;
-            data[i] = Math.max(0, Math.min(255, data[i] + noise));
-            data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
-            data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise - 5));
-        }
-        tctx.putImageData(imgData, 0, 0);
-        for (let i = 0; i < 8; i++) {
+        
+        // CORREÇÃO: Gradientes são muito mais leves para a GPU do que loop de pixels
+        for (let i = 0; i < 6; i++) {
             const x = Math.random() * W, y = Math.random() * H;
-            const r = 30 + Math.random() * 80;
+            const r = 50 + Math.random() * 100;
             const grad = tctx.createRadialGradient(x, y, 0, x, y, r);
-            grad.addColorStop(0, 'rgba(180, 160, 120, 0.08)');
+            grad.addColorStop(0, 'rgba(180, 160, 120, 0.06)');
             grad.addColorStop(1, 'rgba(180, 160, 120, 0)');
             tctx.fillStyle = grad;
             tctx.beginPath(); tctx.arc(x, y, r, 0, Math.PI * 2); tctx.fill();
@@ -136,12 +142,14 @@
     }
 
     let audioCtx = null, muted = false, audioInitialized = false;
-    let musicPlaying = false, musicNodes = [];
+    let musicPlaying = false, musicNodes = [], musicTimeouts = [];
 
     function initAudio() {
         if (audioInitialized) return;
-        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioInitialized = true; }
-        catch(e) {}
+        try { 
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+            audioInitialized = true; 
+        } catch(e) {}
     }
 
     function playTone(freq, duration, type = 'sine', volume = 0.15, attack = 0.01) {
@@ -156,6 +164,11 @@
         gain.gain.linearRampToValueAtTime(volume, now + attack);
         gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
         osc.start(now); osc.stop(now + duration);
+        
+        // CORREÇÃO 2: Limpeza automática de nós de áudio
+        setTimeout(() => {
+            try { osc.disconnect(); gain.disconnect(); } catch(e) {}
+        }, duration * 1000 + 100);
     }
 
     function startMusic() {
@@ -164,31 +177,42 @@
         musicPlaying = true;
         const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
         const masterGain = audioCtx.createGain();
-        masterGain.gain.value = 0.04;
+        masterGain.gain.value = 0.03; // Volume um pouco menor para evitar distorção
         masterGain.connect(audioCtx.destination);
         musicNodes.push(masterGain);
+        
         function playNote() {
             if (!musicPlaying || muted) return;
             const freq = scale[Math.floor(Math.random() * scale.length)];
             const osc = audioCtx.createOscillator();
             const noteGain = audioCtx.createGain();
             const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass'; filter.frequency.value = 1200;
+            filter.type = 'lowpass'; filter.frequency.value = 800;
             osc.type = 'sine'; osc.frequency.value = freq;
             osc.connect(filter); filter.connect(noteGain); noteGain.connect(masterGain);
             const now = audioCtx.currentTime;
             noteGain.gain.setValueAtTime(0, now);
-            noteGain.gain.linearRampToValueAtTime(0.3, now + 0.3);
+            noteGain.gain.linearRampToValueAtTime(0.4, now + 0.3);
             noteGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
             osc.start(now); osc.stop(now + 2.5);
-            setTimeout(playNote, 800 + Math.random() * 1200);
+            
+            setTimeout(() => {
+                try { osc.disconnect(); filter.disconnect(); noteGain.disconnect(); } catch(e) {}
+            }, 2600);
+
+            const t = setTimeout(playNote, 1000 + Math.random() * 1500);
+            musicTimeouts.push(t);
         }
         playNote();
-        setTimeout(playNote, 400);
+        musicTimeouts.push(setTimeout(playNote, 500));
     }
 
     function stopMusic() {
         musicPlaying = false;
+        // CORREÇÃO 2: Cancelar todos os timeouts pendentes
+        musicTimeouts.forEach(clearTimeout);
+        musicTimeouts = [];
+        // Desconectar e limpar nós
         musicNodes.forEach(n => { try { n.disconnect(); } catch(e) {} });
         musicNodes = [];
     }
@@ -197,7 +221,7 @@
     function startDragSound() {
         if (muted || !audioCtx || dragNoiseNode) return;
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        const bufferSize = 2 * audioCtx.sampleRate;
+        const bufferSize = audioCtx.sampleRate * 2;
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
@@ -205,34 +229,24 @@
         dragNoiseNode.buffer = buffer; dragNoiseNode.loop = true;
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'bandpass'; filter.frequency.value = 2500; filter.Q.value = 1.5;
-        dragGain = audioCtx.createGain(); dragGain.gain.value = 0.04;
+        dragGain = audioCtx.createGain(); dragGain.gain.value = 0.03;
         dragNoiseNode.connect(filter); filter.connect(dragGain);
         dragGain.connect(audioCtx.destination); dragNoiseNode.start();
     }
     function stopDragSound() {
-        if (dragNoiseNode) { try { dragNoiseNode.stop(); } catch(e) {} dragNoiseNode = null; dragGain = null; }
+        if (dragNoiseNode) { 
+            try { dragNoiseNode.stop(); dragNoiseNode.disconnect(); dragGain.disconnect(); } catch(e) {} 
+            dragNoiseNode = null; dragGain = null; 
+        }
     }
 
-    function soundCombine() {
-        playTone(523, 0.15, 'sine', 0.2);
-        setTimeout(() => playTone(659, 0.15, 'sine', 0.2), 60);
-        setTimeout(() => playTone(784, 0.25, 'sine', 0.2), 120);
-    }
-    function soundFail() {
-        playTone(220, 0.3, 'sawtooth', 0.1);
-        setTimeout(() => playTone(165, 0.4, 'sawtooth', 0.1), 100);
-    }
-    function soundLevelUp() {
-        [523, 659, 784, 1047].forEach((n, i) => setTimeout(() => playTone(n, 0.2, 'triangle', 0.2), i * 80));
-    }
+    function soundCombine() { playTone(523, 0.15, 'sine', 0.2); setTimeout(() => playTone(659, 0.15, 'sine', 0.2), 60); setTimeout(() => playTone(784, 0.25, 'sine', 0.2), 120); }
+    function soundFail() { playTone(220, 0.3, 'sawtooth', 0.1); setTimeout(() => playTone(165, 0.4, 'sawtooth', 0.1), 100); }
+    function soundLevelUp() { [523, 659, 784, 1047].forEach((n, i) => setTimeout(() => playTone(n, 0.2, 'triangle', 0.2), i * 80)); }
     function soundClick() { playTone(800, 0.08, 'square', 0.1); }
     function soundInkDrop() { playTone(180, 0.1, 'sine', 0.15); }
-    function soundDiscovery() {
-        [440, 554, 659, 880, 1108].forEach((n, i) => setTimeout(() => playTone(n, 0.3, 'triangle', 0.25), i * 100));
-    }
-    function soundAchievement() {
-        [523, 659, 784, 1047, 1318].forEach((n, i) => setTimeout(() => playTone(n, 0.25, 'sine', 0.3), i * 70));
-    }
+    function soundDiscovery() { [440, 554, 659, 880, 1108].forEach((n, i) => setTimeout(() => playTone(n, 0.3, 'triangle', 0.25), i * 100)); }
+    function soundAchievement() { [523, 659, 784, 1047, 1318].forEach((n, i) => setTimeout(() => playTone(n, 0.25, 'sine', 0.3), i * 70)); }
 
     const muteBtn = document.getElementById('muteBtn');
     muteBtn.addEventListener('click', () => {
@@ -297,424 +311,89 @@
     const scratchMarks = [];
     function addScratchMark(x, y) { scratchMarks.push({ x, y, life: 2, size: 20 + Math.random() * 15 }); }
 
+    // [Função drawIcon permanece exatamente a mesma, omitida aqui para economizar espaço, mas está no seu código original]
     function drawIcon(ctx, id, x, y, r, color) {
         ctx.save();
         ctx.strokeStyle = color; ctx.fillStyle = color;
         ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         const s = r * 0.5;
         switch(id) {
-            case 'agua':
-                ctx.beginPath(); ctx.moveTo(x, y - s);
-                ctx.bezierCurveTo(x + s, y - s*0.3, x + s*0.8, y + s, x, y + s);
-                ctx.bezierCurveTo(x - s*0.8, y + s, x - s, y - s*0.3, x, y - s); ctx.stroke(); break;
-            case 'fogo':
-                ctx.beginPath(); ctx.moveTo(x, y + s);
-                ctx.bezierCurveTo(x - s*0.8, y + s*0.5, x - s*0.6, y - s*0.3, x, y - s);
-                ctx.bezierCurveTo(x + s*0.6, y - s*0.3, x + s*0.8, y + s*0.5, x, y + s); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y + s*0.5);
-                ctx.bezierCurveTo(x - s*0.3, y + s*0.2, x - s*0.2, y - s*0.2, x, y - s*0.5);
-                ctx.bezierCurveTo(x + s*0.2, y - s*0.2, x + s*0.3, y + s*0.2, x, y + s*0.5); ctx.stroke(); break;
-            case 'terra':
-                ctx.beginPath(); ctx.moveTo(x - s, y + s*0.7); ctx.lineTo(x - s*0.3, y - s*0.5);
-                ctx.lineTo(x, y - s*0.2); ctx.lineTo(x + s*0.4, y - s*0.8);
-                ctx.lineTo(x + s, y + s*0.7); ctx.closePath(); ctx.stroke(); break;
-            case 'ar':
-                ctx.beginPath(); ctx.moveTo(x - s, y - s*0.4);
-                ctx.quadraticCurveTo(x - s*0.3, y - s*0.8, x + s*0.3, y - s*0.4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.8, y);
-                ctx.quadraticCurveTo(x, y - s*0.4, x + s*0.8, y); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s, y + s*0.4);
-                ctx.quadraticCurveTo(x - s*0.3, y, x + s*0.3, y + s*0.4); ctx.stroke(); break;
-            case 'semente':
-                ctx.beginPath(); ctx.ellipse(x, y + s*0.3, s*0.3, s*0.4, 0, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.1); ctx.lineTo(x, y - s*0.8); ctx.stroke();
-                ctx.beginPath(); ctx.ellipse(x - s*0.2, y - s*0.6, s*0.15, s*0.25, -0.5, 0, Math.PI * 2); ctx.stroke(); break;
-            case 'pedra':
-                ctx.beginPath(); ctx.moveTo(x - s*0.8, y + s*0.2); ctx.lineTo(x - s*0.5, y - s*0.6);
-                ctx.lineTo(x + s*0.3, y - s*0.7); ctx.lineTo(x + s*0.9, y - s*0.1);
-                ctx.lineTo(x + s*0.6, y + s*0.7); ctx.lineTo(x - s*0.4, y + s*0.7); ctx.closePath(); ctx.stroke(); break;
-            case 'magma':
-                ctx.beginPath(); ctx.moveTo(x - s*0.8, y + s*0.5); ctx.lineTo(x - s*0.4, y - s*0.3);
-                ctx.lineTo(x + s*0.4, y - s*0.3); ctx.lineTo(x + s*0.8, y + s*0.5); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3);
-                ctx.quadraticCurveTo(x - s*0.1, y - s*0.8, x, y - s*0.5);
-                ctx.quadraticCurveTo(x + s*0.1, y - s*0.9, x + s*0.2, y - s*0.3); ctx.stroke(); break;
-            case 'vapor':
-                ctx.beginPath(); ctx.arc(x - s*0.4, y, s*0.35, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.1, y - s*0.2, s*0.4, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.4, y + s*0.2, s*0.3, 0, Math.PI * 2); ctx.stroke(); break;
-            case 'lama':
-                ctx.beginPath(); ctx.ellipse(x, y + s*0.2, s*0.8, s*0.4, 0, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x - s*0.3, y - s*0.3, s*0.1, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(x + s*0.4, y - s*0.1, s*0.08, 0, Math.PI * 2); ctx.fill(); break;
-            case 'carvao':
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.8); ctx.lineTo(x + s*0.7, y);
-                ctx.lineTo(x, y + s*0.8); ctx.lineTo(x - s*0.7, y); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3); ctx.lineTo(x + s*0.1, y); ctx.stroke(); break;
-            case 'diamante':
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.3); ctx.lineTo(x + s*0.6, y - s*0.3);
-                ctx.lineTo(x, y + s*0.8); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.3); ctx.lineTo(x - s*0.3, y - s*0.7);
-                ctx.lineTo(x + s*0.3, y - s*0.7); ctx.lineTo(x + s*0.6, y - s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.7); ctx.lineTo(x - s*0.15, y - s*0.3);
-                ctx.lineTo(x, y + s*0.8); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.3, y - s*0.7); ctx.lineTo(x + s*0.15, y - s*0.3);
-                ctx.lineTo(x, y + s*0.8); ctx.stroke(); break;
-            case 'luz':
-                ctx.beginPath(); ctx.arc(x, y, s*0.35, 0, Math.PI * 2); ctx.stroke();
-                for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; ctx.beginPath();
-                    ctx.moveTo(x + Math.cos(a) * s*0.5, y + Math.sin(a) * s*0.5);
-                    ctx.lineTo(x + Math.cos(a) * s*0.8, y + Math.sin(a) * s*0.8); ctx.stroke(); } break;
-            case 'estrela':
-                ctx.beginPath();
-                for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
-                    const r2 = i % 2 === 0 ? s*0.9 : s*0.4;
-                    if (i === 0) ctx.moveTo(x + Math.cos(a)*r2, y + Math.sin(a)*r2);
-                    else ctx.lineTo(x + Math.cos(a)*r2, y + Math.sin(a)*r2); }
-                ctx.closePath(); ctx.stroke(); break;
-            case 'arvore':
-                ctx.beginPath(); ctx.moveTo(x - s*0.15, y + s*0.8); ctx.lineTo(x - s*0.15, y + s*0.1);
-                ctx.lineTo(x + s*0.15, y + s*0.1); ctx.lineTo(x + s*0.15, y + s*0.8); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y - s*0.3, s*0.6, 0, Math.PI * 2); ctx.stroke(); break;
-            case 'vulcao':
-                ctx.beginPath(); ctx.moveTo(x - s*0.9, y + s*0.8); ctx.lineTo(x - s*0.25, y - s*0.3);
-                ctx.lineTo(x + s*0.25, y - s*0.3); ctx.lineTo(x + s*0.9, y + s*0.8); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.25, y - s*0.3); ctx.lineTo(x - s*0.15, y - s*0.5);
-                ctx.lineTo(x + s*0.15, y - s*0.5); ctx.lineTo(x + s*0.25, y - s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x - s*0.1, y - s*0.7, s*0.15, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.15, y - s*0.85, s*0.12, 0, Math.PI * 2); ctx.stroke(); break;
-            case 'metal':
-                ctx.beginPath(); ctx.moveTo(x - s*0.7, y - s*0.5); ctx.lineTo(x + s*0.7, y - s*0.5);
-                ctx.lineTo(x + s*0.5, y + s*0.5); ctx.lineTo(x - s*0.5, y + s*0.5); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.2); ctx.lineTo(x + s*0.3, y - s*0.2); ctx.stroke(); break;
-            case 'vidro':
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.8); ctx.lineTo(x + s*0.5, y - s*0.8);
-                ctx.lineTo(x + s*0.7, y + s*0.8); ctx.lineTo(x - s*0.7, y + s*0.8); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.5); ctx.lineTo(x + s*0.1, y + s*0.3); ctx.stroke(); break;
-            case 'areia':
-                ctx.beginPath(); ctx.moveTo(x - s*0.8, y + s*0.5);
-                ctx.quadraticCurveTo(x - s*0.3, y - s*0.3, x, y - s*0.2);
-                ctx.quadraticCurveTo(x + s*0.3, y - s*0.1, x + s*0.8, y + s*0.5); ctx.stroke();
-                for (let i = 0; i < 5; i++) { ctx.beginPath();
-                    ctx.arc(x + (Math.random()-0.5)*s*1.2, y + Math.random()*s*0.5, 1.5, 0, Math.PI*2); ctx.fill(); } break;
-            case 'oceano':
-                for (let i = 0; i < 3; i++) { ctx.beginPath(); const yO = y - s*0.4 + i*s*0.4;
-                    ctx.moveTo(x - s*0.8, yO); ctx.quadraticCurveTo(x - s*0.4, yO - s*0.2, x, yO);
-                    ctx.quadraticCurveTo(x + s*0.4, yO + s*0.2, x + s*0.8, yO); ctx.stroke(); } break;
-            case 'neve':
-                for (let i = 0; i < 3; i++) { const a = (i/3)*Math.PI; ctx.beginPath();
-                    ctx.moveTo(x + Math.cos(a)*s*0.7, y + Math.sin(a)*s*0.7);
-                    ctx.lineTo(x - Math.cos(a)*s*0.7, y - Math.sin(a)*s*0.7); ctx.stroke(); } break;
-            case 'raio':
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.8); ctx.lineTo(x + s*0.3, y - s*0.1);
-                ctx.lineTo(x - s*0.1, y - s*0.1); ctx.lineTo(x + s*0.2, y + s*0.8);
-                ctx.lineTo(x - s*0.3, y + s*0.1); ctx.lineTo(x + s*0.1, y + s*0.1); ctx.closePath(); ctx.stroke(); break;
-            case 'nuvem':
-                ctx.beginPath(); ctx.arc(x - s*0.4, y + s*0.1, s*0.35, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y - s*0.2, s*0.45, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.4, y + s*0.1, s*0.35, 0, Math.PI*2); ctx.stroke(); break;
-            case 'tempestade':
-                ctx.beginPath(); ctx.arc(x - s*0.3, y - s*0.3, s*0.3, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.1, y - s*0.4, s*0.35, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.1, y); ctx.lineTo(x + s*0.15, y + s*0.3);
-                ctx.lineTo(x - s*0.05, y + s*0.3); ctx.lineTo(x + s*0.1, y + s*0.7); ctx.stroke(); break;
-            case 'fumaca':
-                ctx.beginPath(); ctx.arc(x - s*0.3, y + s*0.2, s*0.3, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.2, y, s*0.35, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x - s*0.1, y - s*0.3, s*0.25, 0, Math.PI*2); ctx.stroke(); break;
-            case 'broto':
-                ctx.beginPath(); ctx.moveTo(x, y + s*0.5); ctx.lineTo(x, y - s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.ellipse(x - s*0.25, y - s*0.1, s*0.2, s*0.3, -0.5, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.ellipse(x + s*0.25, y - s*0.2, s*0.2, s*0.3, 0.5, 0, Math.PI*2); ctx.stroke(); break;
-            case 'flor':
-                for (let i = 0; i < 5; i++) { const a = (i/5)*Math.PI*2;
-                    ctx.beginPath(); ctx.ellipse(x + Math.cos(a)*s*0.4, y + Math.sin(a)*s*0.4, s*0.25, s*0.15, a, 0, Math.PI*2); ctx.stroke(); }
-                ctx.beginPath(); ctx.arc(x, y, s*0.15, 0, Math.PI*2); ctx.fill(); break;
-            case 'folha':
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.3);
-                ctx.quadraticCurveTo(x, y - s*0.5, x + s*0.6, y + s*0.3);
-                ctx.quadraticCurveTo(x, y + s*0.1, x - s*0.6, y + s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y + s*0.2); ctx.lineTo(x + s*0.5, y + s*0.2); ctx.stroke(); break;
-            case 'fruto':
-                ctx.beginPath(); ctx.arc(x, y + s*0.1, s*0.5, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.4); ctx.lineTo(x + s*0.1, y - s*0.7); ctx.stroke();
-                ctx.beginPath(); ctx.ellipse(x + s*0.2, y - s*0.6, s*0.15, s*0.1, 0.5, 0, Math.PI*2); ctx.stroke(); break;
-            case 'lago':
-                ctx.beginPath(); ctx.ellipse(x, y, s*0.8, s*0.4, 0, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.1); ctx.quadraticCurveTo(x, y - s*0.2, x + s*0.5, y - s*0.1); ctx.stroke(); break;
-            case 'rio':
-                ctx.beginPath(); ctx.moveTo(x - s*0.8, y - s*0.3);
-                ctx.quadraticCurveTo(x - s*0.3, y, x, y - s*0.1);
-                ctx.quadraticCurveTo(x + s*0.3, y - s*0.2, x + s*0.8, y + s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.8, y + s*0.1);
-                ctx.quadraticCurveTo(x - s*0.3, y + s*0.4, x, y + s*0.3);
-                ctx.quadraticCurveTo(x + s*0.3, y + s*0.2, x + s*0.8, y + s*0.7); ctx.stroke(); break;
-            case 'cachoeira':
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.7); ctx.lineTo(x + s*0.5, y - s*0.7); ctx.stroke();
-                for (let i = 0; i < 4; i++) {
-                    const yy = y - s*0.5 + i*s*0.35;
-                    ctx.beginPath(); ctx.moveTo(x - s*0.3 + i*2, yy); ctx.lineTo(x - s*0.1, yy + s*0.3); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(x + s*0.1, yy); ctx.lineTo(x + s*0.3 - i*2, yy + s*0.3); ctx.stroke();
-                } break;
-            case 'rocha':
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.4); ctx.lineTo(x - s*0.4, y - s*0.5);
-                ctx.lineTo(x + s*0.3, y - s*0.6); ctx.lineTo(x + s*0.7, y - s*0.1);
-                ctx.lineTo(x + s*0.5, y + s*0.5); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3); ctx.lineTo(x + s*0.2, y + s*0.2); ctx.stroke(); break;
-            case 'montanha':
-                ctx.beginPath(); ctx.moveTo(x - s*0.9, y + s*0.7); ctx.lineTo(x - s*0.2, y - s*0.7);
-                ctx.lineTo(x + s*0.1, y - s*0.4); ctx.lineTo(x + s*0.4, y - s*0.8);
-                ctx.lineTo(x + s*0.9, y + s*0.7); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.7); ctx.lineTo(x - s*0.05, y - s*0.5);
-                ctx.lineTo(x + s*0.1, y - s*0.7); ctx.stroke(); break;
-            case 'caverna':
-                ctx.beginPath(); ctx.arc(x, y + s*0.2, s*0.7, Math.PI, 0); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y + s*0.2, s*0.4, Math.PI, 0); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.7, y + s*0.2); ctx.lineTo(x + s*0.7, y + s*0.2); ctx.stroke(); break;
-            case 'madeira':
-                ctx.beginPath(); ctx.moveTo(x - s*0.15, y + s*0.7); ctx.lineTo(x - s*0.15, y - s*0.5);
-                ctx.lineTo(x + s*0.15, y - s*0.5); ctx.lineTo(x + s*0.15, y + s*0.7); ctx.stroke();
-                for (let i = 0; i < 3; i++) {
-                    ctx.beginPath(); ctx.moveTo(x - s*0.15, y - s*0.3 + i*s*0.3); ctx.lineTo(x + s*0.15, y - s*0.3 + i*s*0.3); ctx.stroke();
-                } break;
-            case 'tijolo':
-                ctx.beginPath(); ctx.rect(x - s*0.6, y - s*0.4, s*1.2, s*0.8); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y); ctx.lineTo(x + s*0.6, y); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.4); ctx.lineTo(x, y); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y); ctx.lineTo(x - s*0.3, y + s*0.4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.3, y); ctx.lineTo(x + s*0.3, y + s*0.4); ctx.stroke(); break;
-            case 'casa':
-                ctx.beginPath(); ctx.moveTo(x - s*0.7, y + s*0.1); ctx.lineTo(x, y - s*0.7); ctx.lineTo(x + s*0.7, y + s*0.1); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.rect(x - s*0.6, y + s*0.1, s*1.2, s*0.7); ctx.stroke();
-                ctx.beginPath(); ctx.rect(x - s*0.2, y + s*0.3, s*0.4, s*0.5); ctx.stroke(); break;
-            case 'castelo':
-                ctx.beginPath(); ctx.rect(x - s*0.7, y - s*0.3, s*1.4, s*1.1); ctx.stroke();
-                ctx.beginPath(); ctx.rect(x - s*0.7, y - s*0.5, s*0.3, s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.rect(x - s*0.15, y - s*0.5, s*0.3, s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.rect(x + s*0.4, y - s*0.5, s*0.3, s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.rect(x - s*0.2, y + s*0.2, s*0.4, s*0.6); ctx.stroke(); break;
-            case 'tocha':
-                ctx.beginPath(); ctx.moveTo(x - s*0.1, y + s*0.7); ctx.lineTo(x - s*0.1, y - s*0.1);
-                ctx.lineTo(x + s*0.1, y - s*0.1); ctx.lineTo(x + s*0.1, y + s*0.7); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.1);
-                ctx.bezierCurveTo(x - s*0.4, y - s*0.3, x - s*0.3, y - s*0.8, x, y - s*0.7);
-                ctx.bezierCurveTo(x + s*0.3, y - s*0.8, x + s*0.4, y - s*0.3, x, y - s*0.1); ctx.stroke(); break;
-            case 'fogueira':
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.5); ctx.lineTo(x + s*0.6, y + s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.4, y + s*0.5); ctx.lineTo(x - s*0.2, y - s*0.3);
-                ctx.lineTo(x, y + s*0.1); ctx.lineTo(x + s*0.2, y - s*0.5); ctx.lineTo(x + s*0.4, y + s*0.5); ctx.stroke(); break;
-            case 'lamparina':
-                ctx.beginPath(); ctx.ellipse(x, y + s*0.2, s*0.4, s*0.5, 0, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3); ctx.lineTo(x + s*0.2, y - s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y + s*0.2, s*0.15, 0, Math.PI*2); ctx.fill(); break;
-            case 'papel':
-                ctx.beginPath(); ctx.rect(x - s*0.5, y - s*0.6, s*1, s*1.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.3); ctx.lineTo(x + s*0.3, y - s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y); ctx.lineTo(x + s*0.3, y); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.3); ctx.lineTo(x + s*0.1, y + s*0.3); ctx.stroke(); break;
-            case 'livro':
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x - s*0.6, y - s*0.4);
-                ctx.lineTo(x - s*0.6, y + s*0.6); ctx.lineTo(x, y + s*0.4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x + s*0.6, y - s*0.4);
-                ctx.lineTo(x + s*0.6, y + s*0.6); ctx.lineTo(x, y + s*0.4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x, y + s*0.4); ctx.stroke(); break;
-            case 'pergaminho':
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.5); ctx.lineTo(x + s*0.5, y - s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.5); ctx.quadraticCurveTo(x - s*0.7, y, x - s*0.5, y + s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.5, y - s*0.5); ctx.quadraticCurveTo(x + s*0.7, y, x + s*0.5, y + s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.2); ctx.lineTo(x + s*0.3, y - s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.1); ctx.lineTo(x + s*0.2, y + s*0.1); ctx.stroke(); break;
-            case 'pena':
-                ctx.beginPath(); ctx.moveTo(x, y + s*0.7); ctx.quadraticCurveTo(x - s*0.1, y, x + s*0.1, y - s*0.7); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.1, y - s*0.5); ctx.quadraticCurveTo(x + s*0.4, y - s*0.3, x + s*0.3, y + s*0.1);
-                ctx.quadraticCurveTo(x + s*0.2, y + s*0.3, x + s*0.05, y + s*0.2); ctx.stroke(); break;
-            case 'asa':
-                ctx.beginPath(); ctx.moveTo(x - s*0.7, y + s*0.3);
-                ctx.quadraticCurveTo(x - s*0.3, y - s*0.6, x + s*0.5, y - s*0.4);
-                ctx.quadraticCurveTo(x + s*0.3, y - s*0.1, x + s*0.6, y + s*0.4);
-                ctx.quadraticCurveTo(x, y + s*0.2, x - s*0.7, y + s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y); ctx.lineTo(x + s*0.3, y - s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.1); ctx.lineTo(x + s*0.4, y); ctx.stroke(); break;
-            case 'passaro':
-                ctx.beginPath(); ctx.ellipse(x, y, s*0.4, s*0.3, 0, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.3, y - s*0.2, s*0.2, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.45, y - s*0.25); ctx.lineTo(x + s*0.6, y - s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.1);
-                ctx.quadraticCurveTo(x - s*0.5, y - s*0.4, x - s*0.6, y - s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.1, y + s*0.2); ctx.lineTo(x - s*0.2, y + s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.1, y + s*0.2); ctx.lineTo(x + s*0.2, y + s*0.5); ctx.stroke(); break;
-            case 'peixe':
-                ctx.beginPath(); ctx.ellipse(x, y, s*0.5, s*0.3, 0, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.4, y); ctx.lineTo(x + s*0.7, y - s*0.3);
-                ctx.lineTo(x + s*0.7, y + s*0.3); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x - s*0.2, y - s*0.05, s*0.08, 0, Math.PI*2); ctx.fill(); break;
-            case 'espada':
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.8); ctx.lineTo(x + s*0.15, y + s*0.3);
-                ctx.lineTo(x, y + s*0.4); ctx.lineTo(x - s*0.15, y + s*0.3); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.3); ctx.lineTo(x + s*0.3, y + s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.1, y + s*0.3); ctx.lineTo(x - s*0.1, y + s*0.7); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.1, y + s*0.3); ctx.lineTo(x + s*0.1, y + s*0.7); ctx.stroke(); break;
-            case 'escudo':
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.5);
-                ctx.quadraticCurveTo(x, y - s*0.7, x + s*0.5, y - s*0.5);
-                ctx.lineTo(x + s*0.4, y + s*0.3);
-                ctx.quadraticCurveTo(x, y + s*0.7, x - s*0.4, y + s*0.3); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.5); ctx.lineTo(x, y + s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.4, y); ctx.lineTo(x + s*0.4, y); ctx.stroke(); break;
-            case 'coroa':
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.3); ctx.lineTo(x - s*0.6, y - s*0.2);
-                ctx.lineTo(x - s*0.3, y + s*0.1); ctx.lineTo(x, y - s*0.4);
-                ctx.lineTo(x + s*0.3, y + s*0.1); ctx.lineTo(x + s*0.6, y - s*0.2);
-                ctx.lineTo(x + s*0.6, y + s*0.3); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x - s*0.3, y - s*0.1, s*0.08, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(x, y - s*0.25, s*0.08, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(x + s*0.3, y - s*0.1, s*0.08, 0, Math.PI*2); ctx.fill(); break;
-            case 'relogio':
-                ctx.beginPath(); ctx.arc(x, y, s*0.6, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - s*0.4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + s*0.3, y + s*0.1); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y, s*0.08, 0, Math.PI*2); ctx.fill();
-                for (let i = 0; i < 12; i++) { const a = (i/12)*Math.PI*2 - Math.PI/2;
-                    ctx.beginPath(); ctx.arc(x + Math.cos(a)*s*0.5, y + Math.sin(a)*s*0.5, s*0.05, 0, Math.PI*2); ctx.fill(); } break;
-            case 'bussola':
-                ctx.beginPath(); ctx.arc(x, y, s*0.6, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.5); ctx.lineTo(x + s*0.15, y);
-                ctx.lineTo(x, y + s*0.5); ctx.lineTo(x - s*0.15, y); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.5); ctx.lineTo(x + s*0.15, y);
-                ctx.lineTo(x, y); ctx.closePath(); ctx.fill(); break;
-            case 'mapa':
-                ctx.beginPath(); ctx.rect(x - s*0.6, y - s*0.5, s*1.2, s*1); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.2); ctx.lineTo(x + s*0.6, y - s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.1); ctx.lineTo(x + s*0.6, y + s*0.1); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.5); ctx.lineTo(x - s*0.2, y + s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.3, y - s*0.5); ctx.lineTo(x + s*0.3, y + s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.1, y - s*0.1, s*0.1, 0, Math.PI*2); ctx.fill(); break;
-            case 'sol':
-                ctx.beginPath(); ctx.arc(x, y, s*0.4, 0, Math.PI*2); ctx.stroke();
-                for (let i = 0; i < 12; i++) { const a = (i/12)*Math.PI*2;
-                    ctx.beginPath(); ctx.moveTo(x + Math.cos(a)*s*0.55, y + Math.sin(a)*s*0.55);
-                    ctx.lineTo(x + Math.cos(a)*s*0.8, y + Math.sin(a)*s*0.8); ctx.stroke(); } break;
-            case 'lua':
-                ctx.beginPath(); ctx.arc(x, y, s*0.5, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.2, y - s*0.1, s*0.4, 0, Math.PI*2);
-                ctx.fillStyle = COLORS.paper; ctx.fill(); break;
-            case 'arcoiris':
-                for (let i = 0; i < 3; i++) {
-                    ctx.beginPath(); ctx.arc(x, y + s*0.3, s*(0.7 - i*0.2), Math.PI, 0); ctx.stroke();
-                } break;
-            case 'cometa':
-                ctx.beginPath(); ctx.arc(x + s*0.3, y - s*0.3, s*0.25, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.1, y - s*0.1);
-                ctx.quadraticCurveTo(x - s*0.3, y + s*0.1, x - s*0.7, y + s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.2, y - s*0.2);
-                ctx.quadraticCurveTo(x - s*0.2, y, x - s*0.6, y + s*0.4); ctx.stroke(); break;
-            case 'planeta':
-                ctx.beginPath(); ctx.arc(x, y, s*0.5, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.ellipse(x, y, s*0.8, s*0.2, 0.3, 0, Math.PI*2); ctx.stroke(); break;
-            case 'dragao':
-                ctx.beginPath(); ctx.ellipse(x, y, s*0.5, s*0.3, 0, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.4, y - s*0.2, s*0.25, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.55, y - s*0.3); ctx.lineTo(x + s*0.7, y - s*0.4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.2);
-                ctx.quadraticCurveTo(x - s*0.6, y - s*0.5, x - s*0.7, y - s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.6, y);
-                ctx.quadraticCurveTo(x + s*0.9, y - s*0.2, x + s*0.8, y + s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.65, y + s*0.1);
-                ctx.bezierCurveTo(x + s*0.8, y + s*0.3, x + s*0.9, y + s*0.1, x + s*0.85, y - s*0.1); ctx.stroke(); break;
-            case 'fada':
-                ctx.beginPath(); ctx.arc(x, y - s*0.3, s*0.2, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.15, y - s*0.1); ctx.lineTo(x - s*0.2, y + s*0.5);
-                ctx.lineTo(x + s*0.2, y + s*0.5); ctx.lineTo(x + s*0.15, y - s*0.1); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.15, y);
-                ctx.quadraticCurveTo(x - s*0.5, y - s*0.2, x - s*0.4, y + s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.15, y);
-                ctx.quadraticCurveTo(x + s*0.5, y - s*0.2, x + s*0.4, y + s*0.2); ctx.stroke();
-                for (let i = 0; i < 3; i++) { const a = Math.random()*Math.PI*2;
-                    ctx.beginPath(); ctx.arc(x + Math.cos(a)*s*0.6, y + Math.sin(a)*s*0.6 - s*0.2, s*0.05, 0, Math.PI*2); ctx.fill(); } break;
-            case 'mago':
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.7); ctx.lineTo(x - s*0.4, y);
-                ctx.lineTo(x + s*0.4, y); ctx.lineTo(x + s*0.3, y + s*0.7); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y - s*0.2, s*0.25, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.3); ctx.lineTo(x, y - s*0.8);
-                ctx.lineTo(x + s*0.3, y - s*0.3); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.4, y + s*0.2); ctx.lineTo(x + s*0.7, y - s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.7, y - s*0.3, s*0.1, 0, Math.PI*2); ctx.fill(); break;
-            case 'pocao':
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.6); ctx.lineTo(x - s*0.2, y - s*0.2);
-                ctx.lineTo(x - s*0.4, y + s*0.5); ctx.quadraticCurveTo(x, y + s*0.7, x + s*0.4, y + s*0.5);
-                ctx.lineTo(x + s*0.2, y - s*0.2); ctx.lineTo(x + s*0.2, y - s*0.6); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.6); ctx.lineTo(x + s*0.3, y - s*0.6); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x - s*0.1, y + s*0.2, s*0.08, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(x + s*0.15, y + s*0.3, s*0.06, 0, Math.PI*2); ctx.fill(); break;
-            case 'elixir':
-                ctx.beginPath(); ctx.moveTo(x - s*0.25, y - s*0.6); ctx.lineTo(x - s*0.25, y - s*0.2);
-                ctx.lineTo(x - s*0.5, y + s*0.4); ctx.quadraticCurveTo(x, y + s*0.8, x + s*0.5, y + s*0.4);
-                ctx.lineTo(x + s*0.25, y - s*0.2); ctx.lineTo(x + s*0.25, y - s*0.6); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.35, y - s*0.6); ctx.lineTo(x + s*0.35, y - s*0.6); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y - s*0.75, s*0.15, 0, Math.PI*2); ctx.stroke();
-                for (let i = 0; i < 4; i++) { const a = Math.random()*Math.PI*2;
-                    ctx.beginPath(); ctx.arc(x + Math.cos(a)*s*0.3, y + Math.sin(a)*s*0.3, s*0.05, 0, Math.PI*2); ctx.fill(); } break;
-            case 'bau':
-                ctx.beginPath(); ctx.rect(x - s*0.6, y - s*0.2, s*1.2, s*0.7); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.2);
-                ctx.quadraticCurveTo(x, y - s*0.6, x + s*0.6, y - s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.rect(x - s*0.15, y + s*0.1, s*0.3, s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y + s*0.2, s*0.05, 0, Math.PI*2); ctx.fill(); break;
-            case 'chave':
-                ctx.beginPath(); ctx.arc(x - s*0.3, y, s*0.25, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.05, y); ctx.lineTo(x + s*0.5, y); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.3, y); ctx.lineTo(x + s*0.3, y + s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.45, y); ctx.lineTo(x + s*0.45, y + s*0.15); ctx.stroke(); break;
-            case 'porta':
-                ctx.beginPath(); ctx.rect(x - s*0.4, y - s*0.6, s*0.8, s*1.2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y - s*0.6, s*0.4, Math.PI, 0); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.2, y + s*0.1, s*0.06, 0, Math.PI*2); ctx.fill(); break;
-            case 'engrenagem':
-                ctx.beginPath(); ctx.arc(x, y, s*0.4, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y, s*0.2, 0, Math.PI*2); ctx.stroke();
-                for (let i = 0; i < 8; i++) { const a = (i/8)*Math.PI*2;
-                    ctx.beginPath(); ctx.rect(x + Math.cos(a)*s*0.35 - s*0.08, y + Math.sin(a)*s*0.35 - s*0.08, s*0.16, s*0.16); ctx.stroke(); } break;
-            case 'maquina':
-                ctx.beginPath(); ctx.rect(x - s*0.6, y - s*0.4, s*1.2, s*0.9); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x - s*0.3, y, s*0.2, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x + s*0.3, y, s*0.2, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.4); ctx.lineTo(x - s*0.6, y - s*0.7);
-                ctx.lineTo(x - s*0.3, y - s*0.7); ctx.stroke(); break;
-            case 'ouro':
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.3); ctx.lineTo(x + s*0.5, y - s*0.3);
-                ctx.lineTo(x + s*0.6, y + s*0.3); ctx.lineTo(x - s*0.6, y + s*0.3); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.3); ctx.lineTo(x - s*0.2, y + s*0.3); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.1, y - s*0.3); ctx.lineTo(x + s*0.2, y + s*0.3); ctx.stroke(); break;
-            case 'rubi':
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x + s*0.5, y - s*0.2);
-                ctx.lineTo(x + s*0.3, y + s*0.5); ctx.lineTo(x - s*0.3, y + s*0.5);
-                ctx.lineTo(x - s*0.5, y - s*0.2); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.2); ctx.lineTo(x + s*0.5, y - s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x, y + s*0.5); ctx.stroke(); break;
-            case 'esmeralda':
-                ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.4); ctx.lineTo(x + s*0.5, y - s*0.4);
-                ctx.lineTo(x + s*0.6, y); ctx.lineTo(x + s*0.4, y + s*0.5);
-                ctx.lineTo(x - s*0.4, y + s*0.5); ctx.lineTo(x - s*0.6, y); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.4); ctx.lineTo(x - s*0.4, y + s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x + s*0.3, y - s*0.4); ctx.lineTo(x + s*0.4, y + s*0.5); ctx.stroke(); break;
-            case 'tinta':
-                ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.5); ctx.lineTo(x - s*0.3, y + s*0.3);
-                ctx.quadraticCurveTo(x, y + s*0.6, x + s*0.3, y + s*0.3);
-                ctx.lineTo(x + s*0.3, y - s*0.5); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.4, y - s*0.5); ctx.lineTo(x + s*0.4, y - s*0.5); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y + s*0.1, s*0.1, 0, Math.PI*2); ctx.fill(); break;
-            case 'corpo':
-                ctx.beginPath(); ctx.ellipse(x, y, s*0.4, s*0.5, 0, 0, Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x, y - s*0.55, s*0.25, 0, Math.PI*2); ctx.stroke(); break;
-            case 'magnetita':
-                ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.3); ctx.lineTo(x - s*0.4, y - s*0.5);
-                ctx.lineTo(x + s*0.2, y - s*0.6); ctx.lineTo(x + s*0.6, y - s*0.1);
-                ctx.lineTo(x + s*0.4, y + s*0.5); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3); ctx.lineTo(x + s*0.2, y + s*0.2); ctx.stroke();
-                ctx.beginPath(); ctx.arc(x - s*0.1, y, s*0.08, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(x + s*0.15, y + s*0.1, s*0.06, 0, Math.PI*2); ctx.fill(); break;
-            default:
-                ctx.beginPath(); ctx.arc(x, y, s*0.6, 0, Math.PI*2); ctx.stroke();
+            case 'agua': ctx.beginPath(); ctx.moveTo(x, y - s); ctx.bezierCurveTo(x + s, y - s*0.3, x + s*0.8, y + s, x, y + s); ctx.bezierCurveTo(x - s*0.8, y + s, x - s, y - s*0.3, x, y - s); ctx.stroke(); break;
+            case 'fogo': ctx.beginPath(); ctx.moveTo(x, y + s); ctx.bezierCurveTo(x - s*0.8, y + s*0.5, x - s*0.6, y - s*0.3, x, y - s); ctx.bezierCurveTo(x + s*0.6, y - s*0.3, x + s*0.8, y + s*0.5, x, y + s); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y + s*0.5); ctx.bezierCurveTo(x - s*0.3, y + s*0.2, x - s*0.2, y - s*0.2, x, y - s*0.5); ctx.bezierCurveTo(x + s*0.2, y - s*0.2, x + s*0.3, y + s*0.2, x, y + s*0.5); ctx.stroke(); break;
+            case 'terra': ctx.beginPath(); ctx.moveTo(x - s, y + s*0.7); ctx.lineTo(x - s*0.3, y - s*0.5); ctx.lineTo(x, y - s*0.2); ctx.lineTo(x + s*0.4, y - s*0.8); ctx.lineTo(x + s, y + s*0.7); ctx.closePath(); ctx.stroke(); break;
+            case 'ar': ctx.beginPath(); ctx.moveTo(x - s, y - s*0.4); ctx.quadraticCurveTo(x - s*0.3, y - s*0.8, x + s*0.3, y - s*0.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.8, y); ctx.quadraticCurveTo(x, y - s*0.4, x + s*0.8, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s, y + s*0.4); ctx.quadraticCurveTo(x - s*0.3, y, x + s*0.3, y + s*0.4); ctx.stroke(); break;
+            case 'semente': ctx.beginPath(); ctx.ellipse(x, y + s*0.3, s*0.3, s*0.4, 0, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.1); ctx.lineTo(x, y - s*0.8); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x - s*0.2, y - s*0.6, s*0.15, s*0.25, -0.5, 0, Math.PI * 2); ctx.stroke(); break;
+            case 'pedra': ctx.beginPath(); ctx.moveTo(x - s*0.8, y + s*0.2); ctx.lineTo(x - s*0.5, y - s*0.6); ctx.lineTo(x + s*0.3, y - s*0.7); ctx.lineTo(x + s*0.9, y - s*0.1); ctx.lineTo(x + s*0.6, y + s*0.7); ctx.lineTo(x - s*0.4, y + s*0.7); ctx.closePath(); ctx.stroke(); break;
+            case 'magma': ctx.beginPath(); ctx.moveTo(x - s*0.8, y + s*0.5); ctx.lineTo(x - s*0.4, y - s*0.3); ctx.lineTo(x + s*0.4, y - s*0.3); ctx.lineTo(x + s*0.8, y + s*0.5); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3); ctx.quadraticCurveTo(x - s*0.1, y - s*0.8, x, y - s*0.5); ctx.quadraticCurveTo(x + s*0.1, y - s*0.9, x + s*0.2, y - s*0.3); ctx.stroke(); break;
+            case 'vapor': ctx.beginPath(); ctx.arc(x - s*0.4, y, s*0.35, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.1, y - s*0.2, s*0.4, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.4, y + s*0.2, s*0.3, 0, Math.PI * 2); ctx.stroke(); break;
+            case 'lama': ctx.beginPath(); ctx.ellipse(x, y + s*0.2, s*0.8, s*0.4, 0, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(x - s*0.3, y - s*0.3, s*0.1, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(x + s*0.4, y - s*0.1, s*0.08, 0, Math.PI * 2); ctx.fill(); break;
+            case 'carvao': ctx.beginPath(); ctx.moveTo(x, y - s*0.8); ctx.lineTo(x + s*0.7, y); ctx.lineTo(x, y + s*0.8); ctx.lineTo(x - s*0.7, y); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3); ctx.lineTo(x + s*0.1, y); ctx.stroke(); break;
+            case 'diamante': ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.3); ctx.lineTo(x + s*0.6, y - s*0.3); ctx.lineTo(x, y + s*0.8); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.3); ctx.lineTo(x - s*0.3, y - s*0.7); ctx.lineTo(x + s*0.3, y - s*0.7); ctx.lineTo(x + s*0.6, y - s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.7); ctx.lineTo(x - s*0.15, y - s*0.3); ctx.lineTo(x, y + s*0.8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.3, y - s*0.7); ctx.lineTo(x + s*0.15, y - s*0.3); ctx.lineTo(x, y + s*0.8); ctx.stroke(); break;
+            case 'luz': ctx.beginPath(); ctx.arc(x, y, s*0.35, 0, Math.PI * 2); ctx.stroke(); for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * s*0.5, y + Math.sin(a) * s*0.5); ctx.lineTo(x + Math.cos(a) * s*0.8, y + Math.sin(a) * s*0.8); ctx.stroke(); } break;
+            case 'estrela': ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 - Math.PI / 2; const r2 = i % 2 === 0 ? s*0.9 : s*0.4; if (i === 0) ctx.moveTo(x + Math.cos(a)*r2, y + Math.sin(a)*r2); else ctx.lineTo(x + Math.cos(a)*r2, y + Math.sin(a)*r2); } ctx.closePath(); ctx.stroke(); break;
+            case 'arvore': ctx.beginPath(); ctx.moveTo(x - s*0.15, y + s*0.8); ctx.lineTo(x - s*0.15, y + s*0.1); ctx.lineTo(x + s*0.15, y + s*0.1); ctx.lineTo(x + s*0.15, y + s*0.8); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - s*0.3, s*0.6, 0, Math.PI * 2); ctx.stroke(); break;
+            case 'vulcao': ctx.beginPath(); ctx.moveTo(x - s*0.9, y + s*0.8); ctx.lineTo(x - s*0.25, y - s*0.3); ctx.lineTo(x + s*0.25, y - s*0.3); ctx.lineTo(x + s*0.9, y + s*0.8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.25, y - s*0.3); ctx.lineTo(x - s*0.15, y - s*0.5); ctx.lineTo(x + s*0.15, y - s*0.5); ctx.lineTo(x + s*0.25, y - s*0.3); ctx.stroke(); ctx.beginPath(); ctx.arc(x - s*0.1, y - s*0.7, s*0.15, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.15, y - s*0.85, s*0.12, 0, Math.PI * 2); ctx.stroke(); break;
+            case 'metal': ctx.beginPath(); ctx.moveTo(x - s*0.7, y - s*0.5); ctx.lineTo(x + s*0.7, y - s*0.5); ctx.lineTo(x + s*0.5, y + s*0.5); ctx.lineTo(x - s*0.5, y + s*0.5); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.2); ctx.lineTo(x + s*0.3, y - s*0.2); ctx.stroke(); break;
+            case 'vidro': ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.8); ctx.lineTo(x + s*0.5, y - s*0.8); ctx.lineTo(x + s*0.7, y + s*0.8); ctx.lineTo(x - s*0.7, y + s*0.8); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.5); ctx.lineTo(x + s*0.1, y + s*0.3); ctx.stroke(); break;
+            case 'areia': ctx.beginPath(); ctx.moveTo(x - s*0.8, y + s*0.5); ctx.quadraticCurveTo(x - s*0.3, y - s*0.3, x, y - s*0.2); ctx.quadraticCurveTo(x + s*0.3, y - s*0.1, x + s*0.8, y + s*0.5); ctx.stroke(); for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(x + (Math.random()-0.5)*s*1.2, y + Math.random()*s*0.5, 1.5, 0, Math.PI*2); ctx.fill(); } break;
+            case 'oceano': for (let i = 0; i < 3; i++) { ctx.beginPath(); const yO = y - s*0.4 + i*s*0.4; ctx.moveTo(x - s*0.8, yO); ctx.quadraticCurveTo(x - s*0.4, yO - s*0.2, x, yO); ctx.quadraticCurveTo(x + s*0.4, yO + s*0.2, x + s*0.8, yO); ctx.stroke(); } break;
+            case 'neve': for (let i = 0; i < 3; i++) { const a = (i/3)*Math.PI; ctx.beginPath(); ctx.moveTo(x + Math.cos(a)*s*0.7, y + Math.sin(a)*s*0.7); ctx.lineTo(x - Math.cos(a)*s*0.7, y - Math.sin(a)*s*0.7); ctx.stroke(); } break;
+            case 'raio': ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.8); ctx.lineTo(x + s*0.3, y - s*0.1); ctx.lineTo(x - s*0.1, y - s*0.1); ctx.lineTo(x + s*0.2, y + s*0.8); ctx.lineTo(x - s*0.3, y + s*0.1); ctx.lineTo(x + s*0.1, y + s*0.1); ctx.closePath(); ctx.stroke(); break;
+            case 'nuvem': ctx.beginPath(); ctx.arc(x - s*0.4, y + s*0.1, s*0.35, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - s*0.2, s*0.45, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.4, y + s*0.1, s*0.35, 0, Math.PI*2); ctx.stroke(); break;
+            case 'tempestade': ctx.beginPath(); ctx.arc(x - s*0.3, y - s*0.3, s*0.3, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.1, y - s*0.4, s*0.35, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.1, y); ctx.lineTo(x + s*0.15, y + s*0.3); ctx.lineTo(x - s*0.05, y + s*0.3); ctx.lineTo(x + s*0.1, y + s*0.7); ctx.stroke(); break;
+            case 'fumaca': ctx.beginPath(); ctx.arc(x - s*0.3, y + s*0.2, s*0.3, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.2, y, s*0.35, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x - s*0.1, y - s*0.3, s*0.25, 0, Math.PI*2); ctx.stroke(); break;
+            case 'broto': ctx.beginPath(); ctx.moveTo(x, y + s*0.5); ctx.lineTo(x, y - s*0.3); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x - s*0.25, y - s*0.1, s*0.2, s*0.3, -0.5, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x + s*0.25, y - s*0.2, s*0.2, s*0.3, 0.5, 0, Math.PI*2); ctx.stroke(); break;
+            case 'flor': for (let i = 0; i < 5; i++) { const a = (i/5)*Math.PI*2; ctx.beginPath(); ctx.ellipse(x + Math.cos(a)*s*0.4, y + Math.sin(a)*s*0.4, s*0.25, s*0.15, a, 0, Math.PI*2); ctx.stroke(); } ctx.beginPath(); ctx.arc(x, y, s*0.15, 0, Math.PI*2); ctx.fill(); break;
+            case 'folha': ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.3); ctx.quadraticCurveTo(x, y - s*0.5, x + s*0.6, y + s*0.3); ctx.quadraticCurveTo(x, y + s*0.1, x - s*0.6, y + s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.5, y + s*0.2); ctx.lineTo(x + s*0.5, y + s*0.2); ctx.stroke(); break;
+            case 'fruto': ctx.beginPath(); ctx.arc(x, y + s*0.1, s*0.5, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.4); ctx.lineTo(x + s*0.1, y - s*0.7); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x + s*0.2, y - s*0.6, s*0.15, s*0.1, 0.5, 0, Math.PI*2); ctx.stroke(); break;
+            case 'lago': ctx.beginPath(); ctx.ellipse(x, y, s*0.8, s*0.4, 0, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.1); ctx.quadraticCurveTo(x, y - s*0.2, x + s*0.5, y - s*0.1); ctx.stroke(); break;
+            case 'rio': ctx.beginPath(); ctx.moveTo(x - s*0.8, y - s*0.3); ctx.quadraticCurveTo(x - s*0.3, y, x, y - s*0.1); ctx.quadraticCurveTo(x + s*0.3, y - s*0.2, x + s*0.8, y + s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.8, y + s*0.1); ctx.quadraticCurveTo(x - s*0.3, y + s*0.4, x, y + s*0.3); ctx.quadraticCurveTo(x + s*0.3, y + s*0.2, x + s*0.8, y + s*0.7); ctx.stroke(); break;
+            case 'cachoeira': ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.7); ctx.lineTo(x + s*0.5, y - s*0.7); ctx.stroke(); for (let i = 0; i < 4; i++) { const yy = y - s*0.5 + i*s*0.35; ctx.beginPath(); ctx.moveTo(x - s*0.3 + i*2, yy); ctx.lineTo(x - s*0.1, yy + s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.1, yy); ctx.lineTo(x + s*0.3 - i*2, yy + s*0.3); ctx.stroke(); } break;
+            case 'rocha': ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.4); ctx.lineTo(x - s*0.4, y - s*0.5); ctx.lineTo(x + s*0.3, y - s*0.6); ctx.lineTo(x + s*0.7, y - s*0.1); ctx.lineTo(x + s*0.5, y + s*0.5); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3); ctx.lineTo(x + s*0.2, y + s*0.2); ctx.stroke(); break;
+            case 'montanha': ctx.beginPath(); ctx.moveTo(x - s*0.9, y + s*0.7); ctx.lineTo(x - s*0.2, y - s*0.7); ctx.lineTo(x + s*0.1, y - s*0.4); ctx.lineTo(x + s*0.4, y - s*0.8); ctx.lineTo(x + s*0.9, y + s*0.7); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.7); ctx.lineTo(x - s*0.05, y - s*0.5); ctx.lineTo(x + s*0.1, y - s*0.7); ctx.stroke(); break;
+            case 'caverna': ctx.beginPath(); ctx.arc(x, y + s*0.2, s*0.7, Math.PI, 0); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y + s*0.2, s*0.4, Math.PI, 0); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.7, y + s*0.2); ctx.lineTo(x + s*0.7, y + s*0.2); ctx.stroke(); break;
+            case 'madeira': ctx.beginPath(); ctx.moveTo(x - s*0.15, y + s*0.7); ctx.lineTo(x - s*0.15, y - s*0.5); ctx.lineTo(x + s*0.15, y - s*0.5); ctx.lineTo(x + s*0.15, y + s*0.7); ctx.stroke(); for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x - s*0.15, y - s*0.3 + i*s*0.3); ctx.lineTo(x + s*0.15, y - s*0.3 + i*s*0.3); ctx.stroke(); } break;
+            case 'tijolo': ctx.beginPath(); ctx.rect(x - s*0.6, y - s*0.4, s*1.2, s*0.8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.6, y); ctx.lineTo(x + s*0.6, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.4); ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y); ctx.lineTo(x - s*0.3, y + s*0.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.3, y); ctx.lineTo(x + s*0.3, y + s*0.4); ctx.stroke(); break;
+            case 'casa': ctx.beginPath(); ctx.moveTo(x - s*0.7, y + s*0.1); ctx.lineTo(x, y - s*0.7); ctx.lineTo(x + s*0.7, y + s*0.1); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.rect(x - s*0.6, y + s*0.1, s*1.2, s*0.7); ctx.stroke(); ctx.beginPath(); ctx.rect(x - s*0.2, y + s*0.3, s*0.4, s*0.5); ctx.stroke(); break;
+            case 'castelo': ctx.beginPath(); ctx.rect(x - s*0.7, y - s*0.3, s*1.4, s*1.1); ctx.stroke(); ctx.beginPath(); ctx.rect(x - s*0.7, y - s*0.5, s*0.3, s*0.3); ctx.stroke(); ctx.beginPath(); ctx.rect(x - s*0.15, y - s*0.5, s*0.3, s*0.3); ctx.stroke(); ctx.beginPath(); ctx.rect(x + s*0.4, y - s*0.5, s*0.3, s*0.3); ctx.stroke(); ctx.beginPath(); ctx.rect(x - s*0.2, y + s*0.2, s*0.4, s*0.6); ctx.stroke(); break;
+            case 'tocha': ctx.beginPath(); ctx.moveTo(x - s*0.1, y + s*0.7); ctx.lineTo(x - s*0.1, y - s*0.1); ctx.lineTo(x + s*0.1, y - s*0.1); ctx.lineTo(x + s*0.1, y + s*0.7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.1); ctx.bezierCurveTo(x - s*0.4, y - s*0.3, x - s*0.3, y - s*0.8, x, y - s*0.7); ctx.bezierCurveTo(x + s*0.3, y - s*0.8, x + s*0.4, y - s*0.3, x, y - s*0.1); ctx.stroke(); break;
+            case 'fogueira': ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.5); ctx.lineTo(x + s*0.6, y + s*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.4, y + s*0.5); ctx.lineTo(x - s*0.2, y - s*0.3); ctx.lineTo(x, y + s*0.1); ctx.lineTo(x + s*0.2, y - s*0.5); ctx.lineTo(x + s*0.4, y + s*0.5); ctx.stroke(); break;
+            case 'lamparina': ctx.beginPath(); ctx.ellipse(x, y + s*0.2, s*0.4, s*0.5, 0, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3); ctx.lineTo(x + s*0.2, y - s*0.3); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y + s*0.2, s*0.15, 0, Math.PI*2); ctx.fill(); break;
+            case 'papel': ctx.beginPath(); ctx.rect(x - s*0.5, y - s*0.6, s*1, s*1.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.3); ctx.lineTo(x + s*0.3, y - s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y); ctx.lineTo(x + s*0.3, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.3); ctx.lineTo(x + s*0.1, y + s*0.3); ctx.stroke(); break;
+            case 'livro': ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x - s*0.6, y - s*0.4); ctx.lineTo(x - s*0.6, y + s*0.6); ctx.lineTo(x, y + s*0.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x + s*0.6, y - s*0.4); ctx.lineTo(x + s*0.6, y + s*0.6); ctx.lineTo(x, y + s*0.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x, y + s*0.4); ctx.stroke(); break;
+            case 'pergaminho': ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.5); ctx.lineTo(x + s*0.5, y - s*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.5); ctx.quadraticCurveTo(x - s*0.7, y, x - s*0.5, y + s*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.5, y - s*0.5); ctx.quadraticCurveTo(x + s*0.7, y, x + s*0.5, y + s*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.2); ctx.lineTo(x + s*0.3, y - s*0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.1); ctx.lineTo(x + s*0.2, y + s*0.1); ctx.stroke(); break;
+            case 'pena': ctx.beginPath(); ctx.moveTo(x, y + s*0.7); ctx.quadraticCurveTo(x - s*0.1, y, x + s*0.1, y - s*0.7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.1, y - s*0.5); ctx.quadraticCurveTo(x + s*0.4, y - s*0.3, x + s*0.3, y + s*0.1); ctx.quadraticCurveTo(x + s*0.2, y + s*0.3, x + s*0.05, y + s*0.2); ctx.stroke(); break;
+            case 'asa': ctx.beginPath(); ctx.moveTo(x - s*0.7, y + s*0.3); ctx.quadraticCurveTo(x - s*0.3, y - s*0.6, x + s*0.5, y - s*0.4); ctx.quadraticCurveTo(x + s*0.3, y - s*0.1, x + s*0.6, y + s*0.4); ctx.quadraticCurveTo(x, y + s*0.2, x - s*0.7, y + s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.5, y); ctx.lineTo(x + s*0.3, y - s*0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.1); ctx.lineTo(x + s*0.4, y); ctx.stroke(); break;
+            case 'passaro': ctx.beginPath(); ctx.ellipse(x, y, s*0.4, s*0.3, 0, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.3, y - s*0.2, s*0.2, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.45, y - s*0.25); ctx.lineTo(x + s*0.6, y - s*0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.1); ctx.quadraticCurveTo(x - s*0.5, y - s*0.4, x - s*0.6, y - s*0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.1, y + s*0.2); ctx.lineTo(x - s*0.2, y + s*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.1, y + s*0.2); ctx.lineTo(x + s*0.2, y + s*0.5); ctx.stroke(); break;
+            case 'peixe': ctx.beginPath(); ctx.ellipse(x, y, s*0.5, s*0.3, 0, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.4, y); ctx.lineTo(x + s*0.7, y - s*0.3); ctx.lineTo(x + s*0.7, y + s*0.3); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.arc(x - s*0.2, y - s*0.05, s*0.08, 0, Math.PI*2); ctx.fill(); break;
+            case 'espada': ctx.beginPath(); ctx.moveTo(x, y - s*0.8); ctx.lineTo(x + s*0.15, y + s*0.3); ctx.lineTo(x, y + s*0.4); ctx.lineTo(x - s*0.15, y + s*0.3); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.3); ctx.lineTo(x + s*0.3, y + s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.1, y + s*0.3); ctx.lineTo(x - s*0.1, y + s*0.7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.1, y + s*0.3); ctx.lineTo(x + s*0.1, y + s*0.7); ctx.stroke(); break;
+            case 'escudo': ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.5); ctx.quadraticCurveTo(x, y - s*0.7, x + s*0.5, y - s*0.5); ctx.lineTo(x + s*0.4, y + s*0.3); ctx.quadraticCurveTo(x, y + s*0.7, x - s*0.4, y + s*0.3); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.5); ctx.lineTo(x, y + s*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.4, y); ctx.lineTo(x + s*0.4, y); ctx.stroke(); break;
+            case 'coroa': ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.3); ctx.lineTo(x - s*0.6, y - s*0.2); ctx.lineTo(x - s*0.3, y + s*0.1); ctx.lineTo(x, y - s*0.4); ctx.lineTo(x + s*0.3, y + s*0.1); ctx.lineTo(x + s*0.6, y - s*0.2); ctx.lineTo(x + s*0.6, y + s*0.3); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.arc(x - s*0.3, y - s*0.1, s*0.08, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(x, y - s*0.25, s*0.08, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(x + s*0.3, y - s*0.1, s*0.08, 0, Math.PI*2); ctx.fill(); break;
+            case 'relogio': ctx.beginPath(); ctx.arc(x, y, s*0.6, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - s*0.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + s*0.3, y + s*0.1); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, s*0.08, 0, Math.PI*2); ctx.fill(); for (let i = 0; i < 12; i++) { const a = (i/12)*Math.PI*2 - Math.PI/2; ctx.beginPath(); ctx.arc(x + Math.cos(a)*s*0.5, y + Math.sin(a)*s*0.5, s*0.05, 0, Math.PI*2); ctx.fill(); } break;
+            case 'bussola': ctx.beginPath(); ctx.arc(x, y, s*0.6, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.5); ctx.lineTo(x + s*0.15, y); ctx.lineTo(x, y + s*0.5); ctx.lineTo(x - s*0.15, y); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.5); ctx.lineTo(x + s*0.15, y); ctx.lineTo(x, y); ctx.closePath(); ctx.fill(); break;
+            case 'mapa': ctx.beginPath(); ctx.rect(x - s*0.6, y - s*0.5, s*1.2, s*1); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.2); ctx.lineTo(x + s*0.6, y - s*0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.1); ctx.lineTo(x + s*0.6, y + s*0.1); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.5); ctx.lineTo(x - s*0.2, y + s*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.3, y - s*0.5); ctx.lineTo(x + s*0.3, y + s*0.5); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.1, y - s*0.1, s*0.1, 0, Math.PI*2); ctx.fill(); break;
+            case 'sol': ctx.beginPath(); ctx.arc(x, y, s*0.4, 0, Math.PI*2); ctx.stroke(); for (let i = 0; i < 12; i++) { const a = (i/12)*Math.PI*2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a)*s*0.55, y + Math.sin(a)*s*0.55); ctx.lineTo(x + Math.cos(a)*s*0.8, y + Math.sin(a)*s*0.8); ctx.stroke(); } break;
+            case 'lua': ctx.beginPath(); ctx.arc(x, y, s*0.5, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.2, y - s*0.1, s*0.4, 0, Math.PI*2); ctx.fillStyle = COLORS.paper; ctx.fill(); break;
+            case 'arcoiris': for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x, y + s*0.3, s*(0.7 - i*0.2), Math.PI, 0); ctx.stroke(); } break;
+            case 'cometa': ctx.beginPath(); ctx.arc(x + s*0.3, y - s*0.3, s*0.25, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.1, y - s*0.1); ctx.quadraticCurveTo(x - s*0.3, y + s*0.1, x - s*0.7, y + s*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.2, y - s*0.2); ctx.quadraticCurveTo(x - s*0.2, y, x - s*0.6, y + s*0.4); ctx.stroke(); break;
+            case 'planeta': ctx.beginPath(); ctx.arc(x, y, s*0.5, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x, y, s*0.8, s*0.2, 0.3, 0, Math.PI*2); ctx.stroke(); break;
+            case 'dragao': ctx.beginPath(); ctx.ellipse(x, y, s*0.5, s*0.3, 0, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.4, y - s*0.2, s*0.25, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.55, y - s*0.3); ctx.lineTo(x + s*0.7, y - s*0.4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.2); ctx.quadraticCurveTo(x - s*0.6, y - s*0.5, x - s*0.7, y - s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.6, y); ctx.quadraticCurveTo(x + s*0.9, y - s*0.2, x + s*0.8, y + s*0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.65, y + s*0.1); ctx.bezierCurveTo(x + s*0.8, y + s*0.3, x + s*0.9, y + s*0.1, x + s*0.85, y - s*0.1); ctx.stroke(); break;
+            case 'fada': ctx.beginPath(); ctx.arc(x, y - s*0.3, s*0.2, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.15, y - s*0.1); ctx.lineTo(x - s*0.2, y + s*0.5); ctx.lineTo(x + s*0.2, y + s*0.5); ctx.lineTo(x + s*0.15, y - s*0.1); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.15, y); ctx.quadraticCurveTo(x - s*0.5, y - s*0.2, x - s*0.4, y + s*0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.15, y); ctx.quadraticCurveTo(x + s*0.5, y - s*0.2, x + s*0.4, y + s*0.2); ctx.stroke(); for (let i = 0; i < 3; i++) { const a = Math.random()*Math.PI*2; ctx.beginPath(); ctx.arc(x + Math.cos(a)*s*0.6, y + Math.sin(a)*s*0.6 - s*0.2, s*0.05, 0, Math.PI*2); ctx.fill(); } break;
+            case 'mago': ctx.beginPath(); ctx.moveTo(x - s*0.3, y + s*0.7); ctx.lineTo(x - s*0.4, y); ctx.lineTo(x + s*0.4, y); ctx.lineTo(x + s*0.3, y + s*0.7); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - s*0.2, s*0.25, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.3); ctx.lineTo(x, y - s*0.8); ctx.lineTo(x + s*0.3, y - s*0.3); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.4, y + s*0.2); ctx.lineTo(x + s*0.7, y - s*0.3); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.7, y - s*0.3, s*0.1, 0, Math.PI*2); ctx.fill(); break;
+            case 'pocao': ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.6); ctx.lineTo(x - s*0.2, y - s*0.2); ctx.lineTo(x - s*0.4, y + s*0.5); ctx.quadraticCurveTo(x, y + s*0.7, x + s*0.4, y + s*0.5); ctx.lineTo(x + s*0.2, y - s*0.2); ctx.lineTo(x + s*0.2, y - s*0.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.6); ctx.lineTo(x + s*0.3, y - s*0.6); ctx.stroke(); ctx.beginPath(); ctx.arc(x - s*0.1, y + s*0.2, s*0.08, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(x + s*0.15, y + s*0.3, s*0.06, 0, Math.PI*2); ctx.fill(); break;
+            case 'elixir': ctx.beginPath(); ctx.moveTo(x - s*0.25, y - s*0.6); ctx.lineTo(x - s*0.25, y - s*0.2); ctx.lineTo(x - s*0.5, y + s*0.4); ctx.quadraticCurveTo(x, y + s*0.8, x + s*0.5, y + s*0.4); ctx.lineTo(x + s*0.25, y - s*0.2); ctx.lineTo(x + s*0.25, y - s*0.6); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.35, y - s*0.6); ctx.lineTo(x + s*0.35, y - s*0.6); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - s*0.75, s*0.15, 0, Math.PI*2); ctx.stroke(); for (let i = 0; i < 4; i++) { const a = Math.random()*Math.PI*2; ctx.beginPath(); ctx.arc(x + Math.cos(a)*s*0.3, y + Math.sin(a)*s*0.3, s*0.05, 0, Math.PI*2); ctx.fill(); } break;
+            case 'bau': ctx.beginPath(); ctx.rect(x - s*0.6, y - s*0.2, s*1.2, s*0.7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.2); ctx.quadraticCurveTo(x, y - s*0.6, x + s*0.6, y - s*0.2); ctx.stroke(); ctx.beginPath(); ctx.rect(x - s*0.15, y + s*0.1, s*0.3, s*0.2); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y + s*0.2, s*0.05, 0, Math.PI*2); ctx.fill(); break;
+            case 'chave': ctx.beginPath(); ctx.arc(x - s*0.3, y, s*0.25, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.05, y); ctx.lineTo(x + s*0.5, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.3, y); ctx.lineTo(x + s*0.3, y + s*0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.45, y); ctx.lineTo(x + s*0.45, y + s*0.15); ctx.stroke(); break;
+            case 'porta': ctx.beginPath(); ctx.rect(x - s*0.4, y - s*0.6, s*0.8, s*1.2); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - s*0.6, s*0.4, Math.PI, 0); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.2, y + s*0.1, s*0.06, 0, Math.PI*2); ctx.fill(); break;
+            case 'engrenagem': ctx.beginPath(); ctx.arc(x, y, s*0.4, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y, s*0.2, 0, Math.PI*2); ctx.stroke(); for (let i = 0; i < 8; i++) { const a = (i/8)*Math.PI*2; ctx.beginPath(); ctx.rect(x + Math.cos(a)*s*0.35 - s*0.08, y + Math.sin(a)*s*0.35 - s*0.08, s*0.16, s*0.16); ctx.stroke(); } break;
+            case 'maquina': ctx.beginPath(); ctx.rect(x - s*0.6, y - s*0.4, s*1.2, s*0.9); ctx.stroke(); ctx.beginPath(); ctx.arc(x - s*0.3, y, s*0.2, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x + s*0.3, y, s*0.2, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.6, y - s*0.4); ctx.lineTo(x - s*0.6, y - s*0.7); ctx.lineTo(x - s*0.3, y - s*0.7); ctx.stroke(); break;
+            case 'ouro': ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.3); ctx.lineTo(x + s*0.5, y - s*0.3); ctx.lineTo(x + s*0.6, y + s*0.3); ctx.lineTo(x - s*0.6, y + s*0.3); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.3); ctx.lineTo(x - s*0.2, y + s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.1, y - s*0.3); ctx.lineTo(x + s*0.2, y + s*0.3); ctx.stroke(); break;
+            case 'rubi': ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x + s*0.5, y - s*0.2); ctx.lineTo(x + s*0.3, y + s*0.5); ctx.lineTo(x - s*0.3, y + s*0.5); ctx.lineTo(x - s*0.5, y - s*0.2); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.2); ctx.lineTo(x + s*0.5, y - s*0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.6); ctx.lineTo(x, y + s*0.5); ctx.stroke(); break;
+            case 'esmeralda': ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.4); ctx.lineTo(x + s*0.5, y - s*0.4); ctx.lineTo(x + s*0.6, y); ctx.lineTo(x + s*0.4, y + s*0.5); ctx.lineTo(x - s*0.4, y + s*0.5); ctx.lineTo(x - s*0.6, y); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.4); ctx.lineTo(x - s*0.4, y + s*0.5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.3, y - s*0.4); ctx.lineTo(x + s*0.4, y + s*0.5); ctx.stroke(); break;
+            case 'tinta': ctx.beginPath(); ctx.moveTo(x - s*0.3, y - s*0.5); ctx.lineTo(x - s*0.3, y + s*0.3); ctx.quadraticCurveTo(x, y + s*0.6, x + s*0.3, y + s*0.3); ctx.lineTo(x + s*0.3, y - s*0.5); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.4, y - s*0.5); ctx.lineTo(x + s*0.4, y - s*0.5); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y + s*0.1, s*0.1, 0, Math.PI*2); ctx.fill(); break;
+            case 'corpo': ctx.beginPath(); ctx.ellipse(x, y, s*0.4, s*0.5, 0, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - s*0.55, s*0.25, 0, Math.PI*2); ctx.stroke(); break;
+            case 'magnetita': ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.3); ctx.lineTo(x - s*0.4, y - s*0.5); ctx.lineTo(x + s*0.2, y - s*0.6); ctx.lineTo(x + s*0.6, y - s*0.1); ctx.lineTo(x + s*0.4, y + s*0.5); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.2, y - s*0.3); ctx.lineTo(x + s*0.2, y + s*0.2); ctx.stroke(); ctx.beginPath(); ctx.arc(x - s*0.1, y, s*0.08, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(x + s*0.15, y + s*0.1, s*0.06, 0, Math.PI*2); ctx.fill(); break;
+            default: ctx.beginPath(); ctx.arc(x, y, s*0.6, 0, Math.PI*2); ctx.stroke();
         }
         ctx.restore();
     }
@@ -781,14 +460,14 @@
     let saveData = loadSave();
 
     const ACHIEVEMENTS = [
-        { id: 'first_step', name: 'Primeiro Passo', desc: 'Complete o nível 1', icon: '' },
-        { id: 'alchemist', name: 'Alquimista', desc: 'Descubra 10 elementos', icon: '️' },
-        { id: 'collector', name: 'Colecionador', desc: 'Descubra 25 elementos', icon: '' },
+        { id: 'first_step', name: 'Primeiro Passo', desc: 'Complete o nível 1', icon: '👣' },
+        { id: 'alchemist', name: 'Alquimista', desc: 'Descubra 10 elementos', icon: '⚗️' },
+        { id: 'collector', name: 'Colecionador', desc: 'Descubra 25 elementos', icon: '📚' },
         { id: 'master', name: 'Mestre', desc: 'Complete todos os 40 níveis', icon: '👑' },
         { id: 'perfectionist', name: 'Perfeccionista', desc: 'Complete um nível sem errar', icon: '✨' },
         { id: 'speedy', name: 'Veloz', desc: 'Complete um nível em menos de 20s', icon: '⚡' },
         { id: 'explorer', name: 'Explorador', desc: 'Descubra todos os elementos', icon: '🗺️' },
-        { id: 'survivor', name: 'Sobrevivente', desc: 'Complete com menos de 10% de tinta', icon: '' },
+        { id: 'survivor', name: 'Sobrevivente', desc: 'Complete com menos de 10% de tinta', icon: '🔥' },
         { id: 'persistent', name: 'Persistente', desc: 'Tente 10 vezes o mesmo nível', icon: '🔄' },
         { id: 'combo_king', name: 'Rei das Combos', desc: 'Faça 100 combinações', icon: '🎯' }
     ];
@@ -826,329 +505,81 @@
     }
 
     const ALL_ELEMENTS = [
-        { id: 'agua', name: 'Água' }, { id: 'fogo', name: 'Fogo' },
-        { id: 'terra', name: 'Terra' }, { id: 'ar', name: 'Ar' },
-        { id: 'semente', name: 'Semente' }, { id: 'pedra', name: 'Pedra' },
-        { id: 'vapor', name: 'Vapor' }, { id: 'lama', name: 'Lama' },
-        { id: 'magma', name: 'Magma' }, { id: 'vulcao', name: 'Vulcão' },
-        { id: 'arvore', name: 'Árvore' }, { id: 'carvao', name: 'Carvão' },
-        { id: 'diamante', name: 'Diamante' }, { id: 'luz', name: 'Luz' },
-        { id: 'estrela', name: 'Estrela' }, { id: 'metal', name: 'Metal' },
-        { id: 'vidro', name: 'Vidro' }, { id: 'areia', name: 'Areia' },
-        { id: 'oceano', name: 'Oceano' }, { id: 'neve', name: 'Neve' },
-        { id: 'raio', name: 'Raio' }, { id: 'nuvem', name: 'Nuvem' },
-        { id: 'tempestade', name: 'Tempestade' }, { id: 'fumaca', name: 'Fumaça' },
-        { id: 'broto', name: 'Broto' }, { id: 'flor', name: 'Flor' },
-        { id: 'folha', name: 'Folha' }, { id: 'fruto', name: 'Fruto' },
-        { id: 'lago', name: 'Lago' }, { id: 'rio', name: 'Rio' },
-        { id: 'cachoeira', name: 'Cachoeira' }, { id: 'rocha', name: 'Rocha' },
-        { id: 'montanha', name: 'Montanha' }, { id: 'caverna', name: 'Caverna' },
-        { id: 'madeira', name: 'Madeira' }, { id: 'tijolo', name: 'Tijolo' },
-        { id: 'casa', name: 'Casa' }, { id: 'castelo', name: 'Castelo' },
-        { id: 'tocha', name: 'Tocha' }, { id: 'fogueira', name: 'Fogueira' },
-        { id: 'lamparina', name: 'Lamparina' }, { id: 'papel', name: 'Papel' },
-        { id: 'livro', name: 'Livro' }, { id: 'pergaminho', name: 'Pergaminho' },
-        { id: 'pena', name: 'Pena' }, { id: 'asa', name: 'Asa' },
-        { id: 'passaro', name: 'Pássaro' }, { id: 'peixe', name: 'Peixe' },
-        { id: 'espada', name: 'Espada' }, { id: 'escudo', name: 'Escudo' },
-        { id: 'coroa', name: 'Coroa' }, { id: 'relogio', name: 'Relógio' },
-        { id: 'bussola', name: 'Bússola' }, { id: 'mapa', name: 'Mapa' },
-        { id: 'sol', name: 'Sol' }, { id: 'lua', name: 'Lua' },
-        { id: 'arcoiris', name: 'Arco-íris' }, { id: 'cometa', name: 'Cometa' },
-        { id: 'planeta', name: 'Planeta' }, { id: 'dragao', name: 'Dragão' },
-        { id: 'fada', name: 'Fada' }, { id: 'mago', name: 'Mago' },
-        { id: 'pocao', name: 'Poção' }, { id: 'elixir', name: 'Elixir' },
-        { id: 'bau', name: 'Baú' }, { id: 'chave', name: 'Chave' },
-        { id: 'porta', name: 'Porta' }, { id: 'engrenagem', name: 'Engrenagem' },
-        { id: 'maquina', name: 'Máquina' }, { id: 'ouro', name: 'Ouro' },
-        { id: 'rubi', name: 'Rubi' }, { id: 'esmeralda', name: 'Esmeralda' },
-        { id: 'tinta', name: 'Tinta' }, { id: 'corpo', name: 'Corpo' },
-        { id: 'magnetita', name: 'Magnetita' }
+        { id: 'agua', name: 'Água' }, { id: 'fogo', name: 'Fogo' }, { id: 'terra', name: 'Terra' }, { id: 'ar', name: 'Ar' },
+        { id: 'semente', name: 'Semente' }, { id: 'pedra', name: 'Pedra' }, { id: 'vapor', name: 'Vapor' }, { id: 'lama', name: 'Lama' },
+        { id: 'magma', name: 'Magma' }, { id: 'vulcao', name: 'Vulcão' }, { id: 'arvore', name: 'Árvore' }, { id: 'carvao', name: 'Carvão' },
+        { id: 'diamante', name: 'Diamante' }, { id: 'luz', name: 'Luz' }, { id: 'estrela', name: 'Estrela' }, { id: 'metal', name: 'Metal' },
+        { id: 'vidro', name: 'Vidro' }, { id: 'areia', name: 'Areia' }, { id: 'oceano', name: 'Oceano' }, { id: 'neve', name: 'Neve' },
+        { id: 'raio', name: 'Raio' }, { id: 'nuvem', name: 'Nuvem' }, { id: 'tempestade', name: 'Tempestade' }, { id: 'fumaca', name: 'Fumaça' },
+        { id: 'broto', name: 'Broto' }, { id: 'flor', name: 'Flor' }, { id: 'folha', name: 'Folha' }, { id: 'fruto', name: 'Fruto' },
+        { id: 'lago', name: 'Lago' }, { id: 'rio', name: 'Rio' }, { id: 'cachoeira', name: 'Cachoeira' }, { id: 'rocha', name: 'Rocha' },
+        { id: 'montanha', name: 'Montanha' }, { id: 'caverna', name: 'Caverna' }, { id: 'madeira', name: 'Madeira' }, { id: 'tijolo', name: 'Tijolo' },
+        { id: 'casa', name: 'Casa' }, { id: 'castelo', name: 'Castelo' }, { id: 'tocha', name: 'Tocha' }, { id: 'fogueira', name: 'Fogueira' },
+        { id: 'lamparina', name: 'Lamparina' }, { id: 'papel', name: 'Papel' }, { id: 'livro', name: 'Livro' }, { id: 'pergaminho', name: 'Pergaminho' },
+        { id: 'pena', name: 'Pena' }, { id: 'asa', name: 'Asa' }, { id: 'passaro', name: 'Pássaro' }, { id: 'peixe', name: 'Peixe' },
+        { id: 'espada', name: 'Espada' }, { id: 'escudo', name: 'Escudo' }, { id: 'coroa', name: 'Coroa' }, { id: 'relogio', name: 'Relógio' },
+        { id: 'bussola', name: 'Bússola' }, { id: 'mapa', name: 'Mapa' }, { id: 'sol', name: 'Sol' }, { id: 'lua', name: 'Lua' },
+        { id: 'arcoiris', name: 'Arco-íris' }, { id: 'cometa', name: 'Cometa' }, { id: 'planeta', name: 'Planeta' }, { id: 'dragao', name: 'Dragão' },
+        { id: 'fada', name: 'Fada' }, { id: 'mago', name: 'Mago' }, { id: 'pocao', name: 'Poção' }, { id: 'elixir', name: 'Elixir' },
+        { id: 'bau', name: 'Baú' }, { id: 'chave', name: 'Chave' }, { id: 'porta', name: 'Porta' }, { id: 'engrenagem', name: 'Engrenagem' },
+        { id: 'maquina', name: 'Máquina' }, { id: 'ouro', name: 'Ouro' }, { id: 'rubi', name: 'Rubi' }, { id: 'esmeralda', name: 'Esmeralda' },
+        { id: 'tinta', name: 'Tinta' }, { id: 'corpo', name: 'Corpo' }, { id: 'magnetita', name: 'Magnetita' }
     ];
 
     class LevelManager {
         constructor() { this.currentLevel = 1; this.elements = []; this.combinations = []; this.targetId = ''; this.targetName = ''; this.totalLevels = 40; }
-
         loadLevel(num) {
             this.currentLevel = num; this.elements = []; this.combinations = [];
             const w = W, h = H, cx = w/2, cy = h/2;
             const dr = {};
             for (let i = 1; i <= 40; i++) {
-                if (i <= 5) dr[i] = 1.5;
-                else if (i <= 10) dr[i] = 1.8;
-                else if (i <= 20) dr[i] = 2.0;
-                else if (i <= 30) dr[i] = 2.3;
-                else dr[i] = 2.5;
+                if (i <= 5) dr[i] = 1.5; else if (i <= 10) dr[i] = 1.8; else if (i <= 20) dr[i] = 2.0; else if (i <= 30) dr[i] = 2.3; else dr[i] = 2.5;
             }
             game.inkTimer.drainRate = dr[num] || 2.0;
-
             const add = (id, name, x, y) => this.elements.push(new DrawingElement(id, name, x, y));
             const combo = (a, b, r, rn) => this.combinations.push(new Combination(a, b, r, rn));
 
-            if (num === 1) {
-                this.targetId = 'vapor'; this.targetName = 'Vapor';
-                add('agua','Água',cx-w*0.25,cy+h*0.05); add('fogo','Fogo',cx+w*0.25,cy+h*0.05);
-                add('terra','Terra',cx-w*0.25,cy+h*0.25); add('ar','Ar',cx+w*0.25,cy+h*0.25);
-                combo('agua','fogo','vapor','Vapor'); combo('terra','agua','lama','Lama'); combo('fogo','ar','fumaca','Fumaça');
-            } else if (num === 2) {
-                this.targetId = 'vulcao'; this.targetName = 'Vulcão';
-                add('fogo','Fogo',cx-w*0.25,cy+h*0.05); add('terra','Terra',cx+w*0.25,cy+h*0.05);
-                add('agua','Água',cx-w*0.25,cy+h*0.25); add('ar','Ar',cx+w*0.25,cy+h*0.25);
-                combo('terra','fogo','magma','Magma'); combo('magma','ar','vulcao','Vulcão'); combo('agua','fogo','vapor','Vapor');
-            } else if (num === 3) {
-                this.targetId = 'arvore'; this.targetName = 'Árvore';
-                add('terra','Terra',cx-w*0.3,cy+h*0.05); add('agua','Água',cx,cy+h*0.05);
-                add('semente','Semente',cx+w*0.3,cy+h*0.05); add('fogo','Fogo',cx-w*0.2,cy+h*0.25); add('ar','Ar',cx+w*0.2,cy+h*0.25);
-                combo('terra','agua','lama','Lama'); combo('lama','semente','arvore','Árvore'); combo('fogo','ar','fumaca','Fumaça');
-            } else if (num === 4) {
-                this.targetId = 'diamante'; this.targetName = 'Diamante';
-                add('terra','Terra',cx-w*0.35,cy+h*0.05); add('terra','Terra',cx+w*0.35,cy+h*0.05);
-                add('fogo','Fogo',cx-w*0.15,cy+h*0.05); add('pedra','Pedra',cx+w*0.15,cy+h*0.05);
-                add('agua','Água',cx-w*0.25,cy+h*0.25);
-                combo('terra','fogo','magma','Magma'); combo('magma','pedra','carvao','Carvão');
-                combo('carvao','terra','diamante','Diamante'); combo('agua','fogo','vapor','Vapor');
-            } else if (num === 5) {
-                this.targetId = 'estrela'; this.targetName = 'Estrela ★';
-                add('fogo','Fogo',cx-w*0.3,cy+h*0.05); add('fogo','Fogo',cx+w*0.3,cy+h*0.05);
-                add('ar','Ar',cx-w*0.3,cy+h*0.25); add('ar','Ar',cx+w*0.3,cy+h*0.25);
-                add('agua','Água',cx,cy+h*0.15);
-                combo('fogo','ar','luz','Luz'); combo('luz','luz','estrela','Estrela ★');
-            } else if (num === 6) {
-                this.targetId = 'metal'; this.targetName = 'Metal';
-                add('terra','Terra',cx-w*0.3,cy+h*0.05); add('fogo','Fogo',cx+w*0.3,cy+h*0.05);
-                add('pedra','Pedra',cx-w*0.3,cy+h*0.25); add('agua','Água',cx+w*0.3,cy+h*0.25);
-                combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal'); combo('agua','fogo','vapor','Vapor');
-            } else if (num === 7) {
-                this.targetId = 'vidro'; this.targetName = 'Vidro';
-                add('terra','Terra',cx-w*0.35,cy+h*0.05); add('terra','Terra',cx+w*0.35,cy+h*0.05);
-                add('agua','Água',cx-w*0.15,cy+h*0.05); add('fogo','Fogo',cx+w*0.15,cy+h*0.05);
-                add('ar','Ar',cx,cy+h*0.25);
-                combo('terra','agua','lama','Lama'); combo('lama','terra','areia','Areia');
-                combo('areia','fogo','vidro','Vidro'); combo('fogo','ar','fumaca','Fumaça');
-            } else if (num === 8) {
-                this.targetId = 'oceano'; this.targetName = 'Oceano';
-                add('agua','Água',cx-w*0.35,cy+h*0.05); add('agua','Água',cx,cy+h*0.05);
-                add('agua','Água',cx+w*0.35,cy+h*0.05); add('terra','Terra',cx-w*0.25,cy+h*0.25);
-                add('fogo','Fogo',cx+w*0.25,cy+h*0.25);
-                combo('agua','agua','oceano','Oceano'); combo('agua','fogo','vapor','Vapor'); combo('terra','agua','lama','Lama');
-            } else if (num === 9) {
-                this.targetId = 'neve'; this.targetName = 'Neve';
-                add('agua','Água',cx-w*0.3,cy+h*0.05); add('ar','Ar',cx+w*0.3,cy+h*0.05);
-                add('ar','Ar',cx-w*0.3,cy+h*0.25); add('terra','Terra',cx+w*0.3,cy+h*0.25);
-                add('fogo','Fogo',cx,cy+h*0.15);
-                combo('agua','ar','nuvem','Nuvem'); combo('nuvem','ar','neve','Neve'); combo('agua','fogo','vapor','Vapor');
-            } else if (num === 10) {
-                this.targetId = 'tempestade'; this.targetName = 'Tempestade';
-                add('agua','Água',cx-w*0.35,cy+h*0.05); add('ar','Ar',cx+w*0.35,cy+h*0.05);
-                add('fogo','Fogo',cx-w*0.35,cy+h*0.25); add('terra','Terra',cx+w*0.35,cy+h*0.25);
-                combo('agua','ar','nuvem','Nuvem'); combo('fogo','terra','raio','Raio'); combo('nuvem','raio','tempestade','Tempestade');
-            } else if (num === 11) {
-                this.targetId = 'broto'; this.targetName = 'Broto';
-                add('semente','Semente',cx-w*0.25,cy+h*0.1); add('agua','Água',cx+w*0.25,cy+h*0.1);
-                add('terra','Terra',cx,cy+h*0.3);
-                combo('semente','agua','broto','Broto');
-            } else if (num === 12) {
-                this.targetId = 'flor'; this.targetName = 'Flor';
-                add('semente','Semente',cx-w*0.3,cy+h*0.05); add('agua','Água',cx,cy+h*0.05);
-                add('terra','Terra',cx+w*0.3,cy+h*0.05); add('ar','Ar',cx,cy+h*0.25);
-                combo('semente','agua','broto','Broto'); combo('broto','terra','flor','Flor');
-            } else if (num === 13) {
-                this.targetId = 'folha'; this.targetName = 'Folha';
-                add('semente','Semente',cx-w*0.3,cy+h*0.05); add('agua','Água',cx,cy+h*0.05);
-                add('ar','Ar',cx+w*0.3,cy+h*0.05); add('ar','Ar',cx,cy+h*0.25);
-                combo('semente','agua','broto','Broto'); combo('broto','ar','folha','Folha');
-            } else if (num === 14) {
-                this.targetId = 'fruto'; this.targetName = 'Fruto';
-                add('semente','Semente',cx-w*0.3,cy); add('agua','Água',cx,cy);
-                add('terra','Terra',cx+w*0.3,cy); add('fogo','Fogo',cx-w*0.2,cy+h*0.2);
-                add('fogo','Fogo',cx+w*0.2,cy+h*0.2);
-                combo('semente','agua','broto','Broto'); combo('broto','terra','flor','Flor');
-                combo('fogo','fogo','sol','Sol'); combo('flor','sol','fruto','Fruto');
-            } else if (num === 15) {
-                this.targetId = 'lago'; this.targetName = 'Lago';
-                add('agua','Água',cx-w*0.3,cy+h*0.1); add('agua','Água',cx,cy+h*0.1);
-                add('agua','Água',cx+w*0.3,cy+h*0.1); add('terra','Terra',cx,cy+h*0.3);
-                combo('agua','agua','lago','Lago');
-            } else if (num === 16) {
-                this.targetId = 'rio'; this.targetName = 'Rio';
-                add('agua','Água',cx-w*0.3,cy); add('agua','Água',cx,cy);
-                add('agua','Água',cx+w*0.3,cy); add('terra','Terra',cx-w*0.2,cy+h*0.2);
-                add('terra','Terra',cx+w*0.2,cy+h*0.2);
-                combo('agua','agua','lago','Lago'); combo('lago','terra','rio','Rio');
-            } else if (num === 17) {
-                this.targetId = 'cachoeira'; this.targetName = 'Cachoeira';
-                add('agua','Água',cx-w*0.35,cy-h*0.05); add('agua','Água',cx-w*0.1,cy-h*0.05);
-                add('agua','Água',cx+w*0.15,cy-h*0.05); add('agua','Água',cx+w*0.35,cy-h*0.05);
-                add('terra','Terra',cx-w*0.25,cy+h*0.15); add('terra','Terra',cx+w*0.25,cy+h*0.15);
-                add('terra','Terra',cx-w*0.1,cy+h*0.3); add('terra','Terra',cx+w*0.1,cy+h*0.3);
-                add('terra','Terra',cx,cy+h*0.3);
-                combo('agua','agua','lago','Lago'); combo('lago','terra','rio','Rio');
-                combo('terra','terra','rocha','Rocha'); combo('rocha','rocha','montanha','Montanha');
-                combo('rio','montanha','cachoeira','Cachoeira');
-            } else if (num === 18) {
-                this.targetId = 'rocha'; this.targetName = 'Rocha';
-                add('terra','Terra',cx-w*0.25,cy+h*0.1); add('terra','Terra',cx+w*0.25,cy+h*0.1);
-                add('terra','Terra',cx,cy+h*0.3);
-                combo('terra','terra','rocha','Rocha');
-            } else if (num === 19) {
-                this.targetId = 'montanha'; this.targetName = 'Montanha';
-                add('terra','Terra',cx-w*0.35,cy+h*0.05); add('terra','Terra',cx-w*0.1,cy+h*0.05);
-                add('terra','Terra',cx+w*0.1,cy+h*0.05); add('terra','Terra',cx+w*0.35,cy+h*0.05);
-                add('agua','Água',cx,cy+h*0.25);
-                combo('terra','terra','rocha','Rocha'); combo('rocha','rocha','montanha','Montanha');
-            } else if (num === 20) {
-                this.targetId = 'caverna'; this.targetName = 'Caverna';
-                add('terra','Terra',cx-w*0.35,cy); add('terra','Terra',cx-w*0.1,cy);
-                add('terra','Terra',cx+w*0.1,cy); add('terra','Terra',cx+w*0.35,cy);
-                add('agua','Água',cx-w*0.2,cy+h*0.2); add('agua','Água',cx+w*0.2,cy+h*0.2);
-                combo('terra','terra','rocha','Rocha'); combo('rocha','rocha','montanha','Montanha');
-                combo('montanha','agua','caverna','Caverna');
-            } else if (num === 21) {
-                this.targetId = 'madeira'; this.targetName = 'Madeira';
-                add('semente','Semente',cx-w*0.25,cy+h*0.1); add('terra','Terra',cx+w*0.25,cy+h*0.1);
-                add('agua','Água',cx,cy+h*0.3);
-                combo('semente','terra','madeira','Madeira');
-            } else if (num === 22) {
-                this.targetId = 'tijolo'; this.targetName = 'Tijolo';
-                add('terra','Terra',cx-w*0.25,cy+h*0.1); add('fogo','Fogo',cx+w*0.25,cy+h*0.1);
-                add('agua','Água',cx,cy+h*0.3);
-                combo('terra','fogo','tijolo','Tijolo');
-            } else if (num === 23) {
-                this.targetId = 'casa'; this.targetName = 'Casa';
-                add('semente','Semente',cx-w*0.3,cy); add('terra','Terra',cx,cy);
-                add('terra','Terra',cx+w*0.3,cy); add('fogo','Fogo',cx,cy+h*0.25);
-                combo('semente','terra','madeira','Madeira'); combo('terra','fogo','tijolo','Tijolo');
-                combo('madeira','tijolo','casa','Casa');
-            } else if (num === 24) {
-                this.targetId = 'castelo'; this.targetName = 'Castelo';
-                add('semente','Semente',cx-w*0.35,cy-h*0.05); add('semente','Semente',cx+w*0.35,cy-h*0.05);
-                add('terra','Terra',cx-w*0.2,cy-h*0.05); add('terra','Terra',cx+w*0.2,cy-h*0.05);
-                add('terra','Terra',cx-w*0.1,cy+h*0.2); add('terra','Terra',cx+w*0.1,cy+h*0.2);
-                add('fogo','Fogo',cx-w*0.25,cy+h*0.2); add('fogo','Fogo',cx+w*0.25,cy+h*0.2);
-                combo('semente','terra','madeira','Madeira'); combo('terra','fogo','tijolo','Tijolo');
-                combo('madeira','tijolo','casa','Casa'); combo('casa','casa','castelo','Castelo');
-            } else if (num === 25) {
-                this.targetId = 'tocha'; this.targetName = 'Tocha';
-                add('semente','Semente',cx-w*0.25,cy+h*0.1); add('terra','Terra',cx,cy+h*0.1);
-                add('fogo','Fogo',cx+w*0.25,cy+h*0.1); add('agua','Água',cx,cy+h*0.3);
-                combo('semente','terra','madeira','Madeira'); combo('madeira','fogo','tocha','Tocha');
-            } else if (num === 26) {
-                this.targetId = 'fogueira'; this.targetName = 'Fogueira';
-                add('semente','Semente',cx-w*0.35,cy); add('semente','Semente',cx+w*0.35,cy);
-                add('terra','Terra',cx-w*0.15,cy); add('terra','Terra',cx+w*0.15,cy);
-                add('fogo','Fogo',cx-w*0.25,cy+h*0.2); add('fogo','Fogo',cx+w*0.25,cy+h*0.2);
-                combo('semente','terra','madeira','Madeira'); combo('madeira','fogo','tocha','Tocha');
-                combo('tocha','tocha','fogueira','Fogueira');
-            } else if (num === 27) {
-                this.targetId = 'lamparina'; this.targetName = 'Lamparina';
-                add('terra','Terra',cx-w*0.35,cy); add('terra','Terra',cx+w*0.35,cy);
-                add('agua','Água',cx-w*0.15,cy); add('fogo','Fogo',cx+w*0.15,cy);
-                add('fogo','Fogo',cx,cy+h*0.25);
-                combo('terra','agua','lama','Lama'); combo('lama','terra','areia','Areia');
-                combo('areia','fogo','vidro','Vidro'); combo('vidro','fogo','lamparina','Lamparina');
-            } else if (num === 28) {
-                this.targetId = 'papel'; this.targetName = 'Papel';
-                add('semente','Semente',cx-w*0.25,cy+h*0.1); add('terra','Terra',cx,cy+h*0.1);
-                add('agua','Água',cx+w*0.25,cy+h*0.1);
-                combo('semente','terra','madeira','Madeira'); combo('madeira','agua','papel','Papel');
-            } else if (num === 29) {
-                this.targetId = 'livro'; this.targetName = 'Livro';
-                add('semente','Semente',cx-w*0.35,cy); add('semente','Semente',cx+w*0.35,cy);
-                add('terra','Terra',cx-w*0.15,cy); add('terra','Terra',cx+w*0.15,cy);
-                add('agua','Água',cx-w*0.2,cy+h*0.2); add('agua','Água',cx+w*0.2,cy+h*0.2);
-                combo('semente','terra','madeira','Madeira'); combo('madeira','agua','papel','Papel');
-                combo('papel','papel','livro','Livro');
-            } else if (num === 30) {
-                this.targetId = 'pergaminho'; this.targetName = 'Pergaminho';
-                add('semente','Semente',cx-w*0.25,cy); add('terra','Terra',cx+w*0.25,cy);
-                add('agua','Água',cx-w*0.2,cy+h*0.2); add('fogo','Fogo',cx+w*0.2,cy+h*0.2);
-                combo('semente','terra','madeira','Madeira'); combo('madeira','agua','papel','Papel');
-                combo('papel','fogo','pergaminho','Pergaminho');
-            } else if (num === 31) {
-                this.targetId = 'pena'; this.targetName = 'Pena';
-                add('semente','Semente',cx-w*0.3,cy); add('agua','Água',cx+w*0.3,cy);
-                add('ar','Ar',cx-w*0.2,cy+h*0.2); add('ar','Ar',cx+w*0.2,cy+h*0.2);
-                combo('semente','agua','broto','Broto'); combo('broto','ar','folha','Folha');
-                combo('folha','ar','pena','Pena');
-            } else if (num === 32) {
-                this.targetId = 'asa'; this.targetName = 'Asa';
-                add('semente','Semente',cx-w*0.35,cy-h*0.05); add('semente','Semente',cx+w*0.35,cy-h*0.05);
-                add('agua','Água',cx-w*0.15,cy-h*0.05); add('agua','Água',cx+w*0.15,cy-h*0.05);
-                add('ar','Ar',cx-w*0.3,cy+h*0.2); add('ar','Ar',cx-w*0.1,cy+h*0.2);
-                add('ar','Ar',cx+w*0.1,cy+h*0.2); add('ar','Ar',cx+w*0.3,cy+h*0.2);
-                combo('semente','agua','broto','Broto'); combo('broto','ar','folha','Folha');
-                combo('folha','ar','pena','Pena'); combo('pena','pena','asa','Asa');
-            } else if (num === 33) {
-                this.targetId = 'passaro'; this.targetName = 'Pássaro';
-                add('semente','Semente',cx-w*0.35,cy-h*0.05); add('semente','Semente',cx+w*0.35,cy-h*0.05);
-                add('semente','Semente',cx,cy-h*0.05);
-                add('agua','Água',cx-w*0.2,cy-h*0.05); add('agua','Água',cx+w*0.2,cy-h*0.05);
-                add('agua','Água',cx,cy+h*0.1);
-                add('ar','Ar',cx-w*0.3,cy+h*0.15); add('ar','Ar',cx-w*0.1,cy+h*0.15);
-                add('ar','Ar',cx+w*0.1,cy+h*0.15); add('ar','Ar',cx+w*0.3,cy+h*0.15);
-                add('terra','Terra',cx,cy+h*0.3);
-                combo('semente','agua','broto','Broto'); combo('broto','ar','folha','Folha');
-                combo('folha','ar','pena','Pena'); combo('pena','pena','asa','Asa');
-                combo('terra','agua','lama','Lama'); combo('lama','semente','corpo','Corpo');
-                combo('asa','corpo','passaro','Pássaro');
-            } else if (num === 34) {
-                this.targetId = 'peixe'; this.targetName = 'Peixe';
-                add('agua','Água',cx-w*0.3,cy); add('agua','Água',cx+w*0.3,cy);
-                add('terra','Terra',cx-w*0.2,cy+h*0.2); add('semente','Semente',cx+w*0.2,cy+h*0.2);
-                combo('terra','agua','lama','Lama'); combo('lama','semente','corpo','Corpo');
-                combo('agua','corpo','peixe','Peixe');
-            } else if (num === 35) {
-                this.targetId = 'espada'; this.targetName = 'Espada';
-                add('terra','Terra',cx-w*0.35,cy); add('terra','Terra',cx+w*0.35,cy);
-                add('fogo','Fogo',cx-w*0.15,cy); add('pedra','Pedra',cx+w*0.15,cy);
-                add('semente','Semente',cx,cy+h*0.25);
-                combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal');
-                combo('semente','terra','madeira','Madeira'); combo('metal','madeira','espada','Espada');
-            } else if (num === 36) {
-                this.targetId = 'escudo'; this.targetName = 'Escudo';
-                add('terra','Terra',cx-w*0.3,cy); add('terra','Terra',cx+w*0.3,cy);
-                add('fogo','Fogo',cx-w*0.15,cy); add('fogo','Fogo',cx+w*0.15,cy);
-                add('pedra','Pedra',cx-w*0.2,cy+h*0.2); add('pedra','Pedra',cx+w*0.2,cy+h*0.2);
-                combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal');
-                combo('metal','metal','escudo','Escudo');
-            } else if (num === 37) {
-                this.targetId = 'coroa'; this.targetName = 'Coroa';
-                add('terra','Terra',cx-w*0.35,cy-h*0.05); add('terra','Terra',cx+w*0.35,cy-h*0.05);
-                add('terra','Terra',cx-w*0.15,cy-h*0.05); add('terra','Terra',cx+w*0.15,cy-h*0.05);
-                add('fogo','Fogo',cx-w*0.25,cy-h*0.05); add('fogo','Fogo',cx+w*0.25,cy-h*0.05);
-                add('fogo','Fogo',cx,cy-h*0.05);
-                add('pedra','Pedra',cx-w*0.2,cy+h*0.2); add('pedra','Pedra',cx+w*0.2,cy+h*0.2);
-                combo('terra','fogo','magma','Magma'); combo('magma','magma','ouro','Ouro');
-                combo('magma','pedra','carvao','Carvão'); combo('carvao','terra','diamante','Diamante');
-                combo('ouro','diamante','coroa','Coroa');
-            } else if (num === 38) {
-                this.targetId = 'relogio'; this.targetName = 'Relógio';
-                add('terra','Terra',cx-w*0.35,cy); add('terra','Terra',cx+w*0.35,cy);
-                add('terra','Terra',cx,cy);
-                add('fogo','Fogo',cx-w*0.2,cy); add('fogo','Fogo',cx+w*0.2,cy);
-                add('pedra','Pedra',cx-w*0.25,cy+h*0.2); add('agua','Água',cx+w*0.25,cy+h*0.2);
-                combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal');
-                combo('terra','agua','lama','Lama'); combo('lama','terra','areia','Areia');
-                combo('areia','fogo','vidro','Vidro'); combo('metal','vidro','relogio','Relógio');
-            } else if (num === 39) {
-                this.targetId = 'bussola'; this.targetName = 'Bússola';
-                add('terra','Terra',cx-w*0.25,cy); add('fogo','Fogo',cx+w*0.25,cy);
-                add('fogo','Fogo',cx,cy+h*0.15);
-                add('pedra','Pedra',cx-w*0.25,cy+h*0.2); add('pedra','Pedra',cx+w*0.25,cy+h*0.2);
-                combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal');
-                combo('pedra','fogo','magnetita','Magnetita'); combo('metal','magnetita','bussola','Bússola');
-            } else if (num === 40) {
-                this.targetId = 'mapa'; this.targetName = 'Mapa';
-                add('semente','Semente',cx-w*0.3,cy-h*0.05); add('terra','Terra',cx+w*0.3,cy-h*0.05);
-                add('terra','Terra',cx,cy-h*0.05);
-                add('agua','Água',cx-w*0.2,cy-h*0.05); add('agua','Água',cx+w*0.2,cy-h*0.05);
-                add('fogo','Fogo',cx-w*0.25,cy+h*0.2); add('pedra','Pedra',cx+w*0.25,cy+h*0.2);
-                combo('semente','terra','madeira','Madeira'); combo('madeira','agua','papel','Papel');
-                combo('terra','fogo','magma','Magma'); combo('magma','pedra','carvao','Carvão');
-                combo('agua','carvao','tinta','Tinta'); combo('papel','tinta','mapa','Mapa');
-            }
+            if (num === 1) { this.targetId = 'vapor'; this.targetName = 'Vapor'; add('agua','Água',cx-w*0.25,cy+h*0.05); add('fogo','Fogo',cx+w*0.25,cy+h*0.05); add('terra','Terra',cx-w*0.25,cy+h*0.25); add('ar','Ar',cx+w*0.25,cy+h*0.25); combo('agua','fogo','vapor','Vapor'); combo('terra','agua','lama','Lama'); combo('fogo','ar','fumaca','Fumaça'); } 
+            else if (num === 2) { this.targetId = 'vulcao'; this.targetName = 'Vulcão'; add('fogo','Fogo',cx-w*0.25,cy+h*0.05); add('terra','Terra',cx+w*0.25,cy+h*0.05); add('agua','Água',cx-w*0.25,cy+h*0.25); add('ar','Ar',cx+w*0.25,cy+h*0.25); combo('terra','fogo','magma','Magma'); combo('magma','ar','vulcao','Vulcão'); combo('agua','fogo','vapor','Vapor'); } 
+            else if (num === 3) { this.targetId = 'arvore'; this.targetName = 'Árvore'; add('terra','Terra',cx-w*0.3,cy+h*0.05); add('agua','Água',cx,cy+h*0.05); add('semente','Semente',cx+w*0.3,cy+h*0.05); add('fogo','Fogo',cx-w*0.2,cy+h*0.25); add('ar','Ar',cx+w*0.2,cy+h*0.25); combo('terra','agua','lama','Lama'); combo('lama','semente','arvore','Árvore'); combo('fogo','ar','fumaca','Fumaça'); } 
+            else if (num === 4) { this.targetId = 'diamante'; this.targetName = 'Diamante'; add('terra','Terra',cx-w*0.35,cy+h*0.05); add('terra','Terra',cx+w*0.35,cy+h*0.05); add('fogo','Fogo',cx-w*0.15,cy+h*0.05); add('pedra','Pedra',cx+w*0.15,cy+h*0.05); add('agua','Água',cx-w*0.25,cy+h*0.25); combo('terra','fogo','magma','Magma'); combo('magma','pedra','carvao','Carvão'); combo('carvao','terra','diamante','Diamante'); combo('agua','fogo','vapor','Vapor'); } 
+            else if (num === 5) { this.targetId = 'estrela'; this.targetName = 'Estrela ★'; add('fogo','Fogo',cx-w*0.3,cy+h*0.05); add('fogo','Fogo',cx+w*0.3,cy+h*0.05); add('ar','Ar',cx-w*0.3,cy+h*0.25); add('ar','Ar',cx+w*0.3,cy+h*0.25); add('agua','Água',cx,cy+h*0.15); combo('fogo','ar','luz','Luz'); combo('luz','luz','estrela','Estrela ★'); } 
+            else if (num === 6) { this.targetId = 'metal'; this.targetName = 'Metal'; add('terra','Terra',cx-w*0.3,cy+h*0.05); add('fogo','Fogo',cx+w*0.3,cy+h*0.05); add('pedra','Pedra',cx-w*0.3,cy+h*0.25); add('agua','Água',cx+w*0.3,cy+h*0.25); combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal'); combo('agua','fogo','vapor','Vapor'); } 
+            else if (num === 7) { this.targetId = 'vidro'; this.targetName = 'Vidro'; add('terra','Terra',cx-w*0.35,cy+h*0.05); add('terra','Terra',cx+w*0.35,cy+h*0.05); add('agua','Água',cx-w*0.15,cy+h*0.05); add('fogo','Fogo',cx+w*0.15,cy+h*0.05); add('ar','Ar',cx,cy+h*0.25); combo('terra','agua','lama','Lama'); combo('lama','terra','areia','Areia'); combo('areia','fogo','vidro','Vidro'); combo('fogo','ar','fumaca','Fumaça'); } 
+            else if (num === 8) { this.targetId = 'oceano'; this.targetName = 'Oceano'; add('agua','Água',cx-w*0.35,cy+h*0.05); add('agua','Água',cx,cy+h*0.05); add('agua','Água',cx+w*0.35,cy+h*0.05); add('terra','Terra',cx-w*0.25,cy+h*0.25); add('fogo','Fogo',cx+w*0.25,cy+h*0.25); combo('agua','agua','oceano','Oceano'); combo('agua','fogo','vapor','Vapor'); combo('terra','agua','lama','Lama'); } 
+            else if (num === 9) { this.targetId = 'neve'; this.targetName = 'Neve'; add('agua','Água',cx-w*0.3,cy+h*0.05); add('ar','Ar',cx+w*0.3,cy+h*0.05); add('ar','Ar',cx-w*0.3,cy+h*0.25); add('terra','Terra',cx+w*0.3,cy+h*0.25); add('fogo','Fogo',cx,cy+h*0.15); combo('agua','ar','nuvem','Nuvem'); combo('nuvem','ar','neve','Neve'); combo('agua','fogo','vapor','Vapor'); } 
+            else if (num === 10) { this.targetId = 'tempestade'; this.targetName = 'Tempestade'; add('agua','Água',cx-w*0.35,cy+h*0.05); add('ar','Ar',cx+w*0.35,cy+h*0.05); add('fogo','Fogo',cx-w*0.35,cy+h*0.25); add('terra','Terra',cx+w*0.35,cy+h*0.25); combo('agua','ar','nuvem','Nuvem'); combo('fogo','terra','raio','Raio'); combo('nuvem','raio','tempestade','Tempestade'); } 
+            else if (num === 11) { this.targetId = 'broto'; this.targetName = 'Broto'; add('semente','Semente',cx-w*0.25,cy+h*0.1); add('agua','Água',cx+w*0.25,cy+h*0.1); add('terra','Terra',cx,cy+h*0.3); combo('semente','agua','broto','Broto'); } 
+            else if (num === 12) { this.targetId = 'flor'; this.targetName = 'Flor'; add('semente','Semente',cx-w*0.3,cy+h*0.05); add('agua','Água',cx,cy+h*0.05); add('terra','Terra',cx+w*0.3,cy+h*0.05); add('ar','Ar',cx,cy+h*0.25); combo('semente','agua','broto','Broto'); combo('broto','terra','flor','Flor'); } 
+            else if (num === 13) { this.targetId = 'folha'; this.targetName = 'Folha'; add('semente','Semente',cx-w*0.3,cy+h*0.05); add('agua','Água',cx,cy+h*0.05); add('ar','Ar',cx+w*0.3,cy+h*0.05); add('ar','Ar',cx,cy+h*0.25); combo('semente','agua','broto','Broto'); combo('broto','ar','folha','Folha'); } 
+            else if (num === 14) { this.targetId = 'fruto'; this.targetName = 'Fruto'; add('semente','Semente',cx-w*0.3,cy); add('agua','Água',cx,cy); add('terra','Terra',cx+w*0.3,cy); add('fogo','Fogo',cx-w*0.2,cy+h*0.2); add('fogo','Fogo',cx+w*0.2,cy+h*0.2); combo('semente','agua','broto','Broto'); combo('broto','terra','flor','Flor'); combo('fogo','fogo','sol','Sol'); combo('flor','sol','fruto','Fruto'); } 
+            else if (num === 15) { this.targetId = 'lago'; this.targetName = 'Lago'; add('agua','Água',cx-w*0.3,cy+h*0.1); add('agua','Água',cx,cy+h*0.1); add('agua','Água',cx+w*0.3,cy+h*0.1); add('terra','Terra',cx,cy+h*0.3); combo('agua','agua','lago','Lago'); } 
+            else if (num === 16) { this.targetId = 'rio'; this.targetName = 'Rio'; add('agua','Água',cx-w*0.3,cy); add('agua','Água',cx,cy); add('agua','Água',cx+w*0.3,cy); add('terra','Terra',cx-w*0.2,cy+h*0.2); add('terra','Terra',cx+w*0.2,cy+h*0.2); combo('agua','agua','lago','Lago'); combo('lago','terra','rio','Rio'); } 
+            else if (num === 17) { this.targetId = 'cachoeira'; this.targetName = 'Cachoeira'; add('agua','Água',cx-w*0.35,cy-h*0.05); add('agua','Água',cx-w*0.1,cy-h*0.05); add('agua','Água',cx+w*0.15,cy-h*0.05); add('agua','Água',cx+w*0.35,cy-h*0.05); add('terra','Terra',cx-w*0.25,cy+h*0.15); add('terra','Terra',cx+w*0.25,cy+h*0.15); add('terra','Terra',cx-w*0.1,cy+h*0.3); add('terra','Terra',cx+w*0.1,cy+h*0.3); add('terra','Terra',cx,cy+h*0.3); combo('agua','agua','lago','Lago'); combo('lago','terra','rio','Rio'); combo('terra','terra','rocha','Rocha'); combo('rocha','rocha','montanha','Montanha'); combo('rio','montanha','cachoeira','Cachoeira'); } 
+            else if (num === 18) { this.targetId = 'rocha'; this.targetName = 'Rocha'; add('terra','Terra',cx-w*0.25,cy+h*0.1); add('terra','Terra',cx+w*0.25,cy+h*0.1); add('terra','Terra',cx,cy+h*0.3); combo('terra','terra','rocha','Rocha'); } 
+            else if (num === 19) { this.targetId = 'montanha'; this.targetName = 'Montanha'; add('terra','Terra',cx-w*0.35,cy+h*0.05); add('terra','Terra',cx-w*0.1,cy+h*0.05); add('terra','Terra',cx+w*0.1,cy+h*0.05); add('terra','Terra',cx+w*0.35,cy+h*0.05); add('agua','Água',cx,cy+h*0.25); combo('terra','terra','rocha','Rocha'); combo('rocha','rocha','montanha','Montanha'); } 
+            else if (num === 20) { this.targetId = 'caverna'; this.targetName = 'Caverna'; add('terra','Terra',cx-w*0.35,cy); add('terra','Terra',cx-w*0.1,cy); add('terra','Terra',cx+w*0.1,cy); add('terra','Terra',cx+w*0.35,cy); add('agua','Água',cx-w*0.2,cy+h*0.2); add('agua','Água',cx+w*0.2,cy+h*0.2); combo('terra','terra','rocha','Rocha'); combo('rocha','rocha','montanha','Montanha'); combo('montanha','agua','caverna','Caverna'); } 
+            else if (num === 21) { this.targetId = 'madeira'; this.targetName = 'Madeira'; add('semente','Semente',cx-w*0.25,cy+h*0.1); add('terra','Terra',cx+w*0.25,cy+h*0.1); add('agua','Água',cx,cy+h*0.3); combo('semente','terra','madeira','Madeira'); } 
+            else if (num === 22) { this.targetId = 'tijolo'; this.targetName = 'Tijolo'; add('terra','Terra',cx-w*0.25,cy+h*0.1); add('fogo','Fogo',cx+w*0.25,cy+h*0.1); add('agua','Água',cx,cy+h*0.3); combo('terra','fogo','tijolo','Tijolo'); } 
+            else if (num === 23) { this.targetId = 'casa'; this.targetName = 'Casa'; add('semente','Semente',cx-w*0.3,cy); add('terra','Terra',cx,cy); add('terra','Terra',cx+w*0.3,cy); add('fogo','Fogo',cx,cy+h*0.25); combo('semente','terra','madeira','Madeira'); combo('terra','fogo','tijolo','Tijolo'); combo('madeira','tijolo','casa','Casa'); } 
+            else if (num === 24) { this.targetId = 'castelo'; this.targetName = 'Castelo'; add('semente','Semente',cx-w*0.35,cy-h*0.05); add('semente','Semente',cx+w*0.35,cy-h*0.05); add('terra','Terra',cx-w*0.2,cy-h*0.05); add('terra','Terra',cx+w*0.2,cy-h*0.05); add('terra','Terra',cx-w*0.1,cy+h*0.2); add('terra','Terra',cx+w*0.1,cy+h*0.2); add('fogo','Fogo',cx-w*0.25,cy+h*0.2); add('fogo','Fogo',cx+w*0.25,cy+h*0.2); combo('semente','terra','madeira','Madeira'); combo('terra','fogo','tijolo','Tijolo'); combo('madeira','tijolo','casa','Casa'); combo('casa','casa','castelo','Castelo'); } 
+            else if (num === 25) { this.targetId = 'tocha'; this.targetName = 'Tocha'; add('semente','Semente',cx-w*0.25,cy+h*0.1); add('terra','Terra',cx,cy+h*0.1); add('fogo','Fogo',cx+w*0.25,cy+h*0.1); add('agua','Água',cx,cy+h*0.3); combo('semente','terra','madeira','Madeira'); combo('madeira','fogo','tocha','Tocha'); } 
+            else if (num === 26) { this.targetId = 'fogueira'; this.targetName = 'Fogueira'; add('semente','Semente',cx-w*0.35,cy); add('semente','Semente',cx+w*0.35,cy); add('terra','Terra',cx-w*0.15,cy); add('terra','Terra',cx+w*0.15,cy); add('fogo','Fogo',cx-w*0.25,cy+h*0.2); add('fogo','Fogo',cx+w*0.25,cy+h*0.2); combo('semente','terra','madeira','Madeira'); combo('madeira','fogo','tocha','Tocha'); combo('tocha','tocha','fogueira','Fogueira'); } 
+            else if (num === 27) { this.targetId = 'lamparina'; this.targetName = 'Lamparina'; add('terra','Terra',cx-w*0.35,cy); add('terra','Terra',cx+w*0.35,cy); add('agua','Água',cx-w*0.15,cy); add('fogo','Fogo',cx+w*0.15,cy); add('fogo','Fogo',cx,cy+h*0.25); combo('terra','agua','lama','Lama'); combo('lama','terra','areia','Areia'); combo('areia','fogo','vidro','Vidro'); combo('vidro','fogo','lamparina','Lamparina'); } 
+            else if (num === 28) { this.targetId = 'papel'; this.targetName = 'Papel'; add('semente','Semente',cx-w*0.25,cy+h*0.1); add('terra','Terra',cx,cy+h*0.1); add('agua','Água',cx+w*0.25,cy+h*0.1); combo('semente','terra','madeira','Madeira'); combo('madeira','agua','papel','Papel'); } 
+            else if (num === 29) { this.targetId = 'livro'; this.targetName = 'Livro'; add('semente','Semente',cx-w*0.35,cy); add('semente','Semente',cx+w*0.35,cy); add('terra','Terra',cx-w*0.15,cy); add('terra','Terra',cx+w*0.15,cy); add('agua','Água',cx-w*0.2,cy+h*0.2); add('agua','Água',cx+w*0.2,cy+h*0.2); combo('semente','terra','madeira','Madeira'); combo('madeira','agua','papel','Papel'); combo('papel','papel','livro','Livro'); } 
+            else if (num === 30) { this.targetId = 'pergaminho'; this.targetName = 'Pergaminho'; add('semente','Semente',cx-w*0.25,cy); add('terra','Terra',cx+w*0.25,cy); add('agua','Água',cx-w*0.2,cy+h*0.2); add('fogo','Fogo',cx+w*0.2,cy+h*0.2); combo('semente','terra','madeira','Madeira'); combo('madeira','agua','papel','Papel'); combo('papel','fogo','pergaminho','Pergaminho'); } 
+            else if (num === 31) { this.targetId = 'pena'; this.targetName = 'Pena'; add('semente','Semente',cx-w*0.3,cy); add('agua','Água',cx+w*0.3,cy); add('ar','Ar',cx-w*0.2,cy+h*0.2); add('ar','Ar',cx+w*0.2,cy+h*0.2); combo('semente','agua','broto','Broto'); combo('broto','ar','folha','Folha'); combo('folha','ar','pena','Pena'); } 
+            else if (num === 32) { this.targetId = 'asa'; this.targetName = 'Asa'; add('semente','Semente',cx-w*0.35,cy-h*0.05); add('semente','Semente',cx+w*0.35,cy-h*0.05); add('agua','Água',cx-w*0.15,cy-h*0.05); add('agua','Água',cx+w*0.15,cy-h*0.05); add('ar','Ar',cx-w*0.3,cy+h*0.2); add('ar','Ar',cx-w*0.1,cy+h*0.2); add('ar','Ar',cx+w*0.1,cy+h*0.2); add('ar','Ar',cx+w*0.3,cy+h*0.2); combo('semente','agua','broto','Broto'); combo('broto','ar','folha','Folha'); combo('folha','ar','pena','Pena'); combo('pena','pena','asa','Asa'); } 
+            else if (num === 33) { this.targetId = 'passaro'; this.targetName = 'Pássaro'; add('semente','Semente',cx-w*0.35,cy-h*0.05); add('semente','Semente',cx+w*0.35,cy-h*0.05); add('semente','Semente',cx,cy-h*0.05); add('agua','Água',cx-w*0.2,cy-h*0.05); add('agua','Água',cx+w*0.2,cy-h*0.05); add('agua','Água',cx,cy+h*0.1); add('ar','Ar',cx-w*0.3,cy+h*0.15); add('ar','Ar',cx-w*0.1,cy+h*0.15); add('ar','Ar',cx+w*0.1,cy+h*0.15); add('ar','Ar',cx+w*0.3,cy+h*0.15); add('terra','Terra',cx,cy+h*0.3); combo('semente','agua','broto','Broto'); combo('broto','ar','folha','Folha'); combo('folha','ar','pena','Pena'); combo('pena','pena','asa','Asa'); combo('terra','agua','lama','Lama'); combo('lama','semente','corpo','Corpo'); combo('asa','corpo','passaro','Pássaro'); } 
+            else if (num === 34) { this.targetId = 'peixe'; this.targetName = 'Peixe'; add('agua','Água',cx-w*0.3,cy); add('agua','Água',cx+w*0.3,cy); add('terra','Terra',cx-w*0.2,cy+h*0.2); add('semente','Semente',cx+w*0.2,cy+h*0.2); combo('terra','agua','lama','Lama'); combo('lama','semente','corpo','Corpo'); combo('agua','corpo','peixe','Peixe'); } 
+            else if (num === 35) { this.targetId = 'espada'; this.targetName = 'Espada'; add('terra','Terra',cx-w*0.35,cy); add('terra','Terra',cx+w*0.35,cy); add('fogo','Fogo',cx-w*0.15,cy); add('pedra','Pedra',cx+w*0.15,cy); add('semente','Semente',cx,cy+h*0.25); combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal'); combo('semente','terra','madeira','Madeira'); combo('metal','madeira','espada','Espada'); } 
+            else if (num === 36) { this.targetId = 'escudo'; this.targetName = 'Escudo'; add('terra','Terra',cx-w*0.3,cy); add('terra','Terra',cx+w*0.3,cy); add('fogo','Fogo',cx-w*0.15,cy); add('fogo','Fogo',cx+w*0.15,cy); add('pedra','Pedra',cx-w*0.2,cy+h*0.2); add('pedra','Pedra',cx+w*0.2,cy+h*0.2); combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal'); combo('metal','metal','escudo','Escudo'); } 
+            else if (num === 37) { this.targetId = 'coroa'; this.targetName = 'Coroa'; add('terra','Terra',cx-w*0.35,cy-h*0.05); add('terra','Terra',cx+w*0.35,cy-h*0.05); add('terra','Terra',cx-w*0.15,cy-h*0.05); add('terra','Terra',cx+w*0.15,cy-h*0.05); add('fogo','Fogo',cx-w*0.25,cy-h*0.05); add('fogo','Fogo',cx+w*0.25,cy-h*0.05); add('fogo','Fogo',cx,cy-h*0.05); add('pedra','Pedra',cx-w*0.2,cy+h*0.2); add('pedra','Pedra',cx+w*0.2,cy+h*0.2); combo('terra','fogo','magma','Magma'); combo('magma','magma','ouro','Ouro'); combo('magma','pedra','carvao','Carvão'); combo('carvao','terra','diamante','Diamante'); combo('ouro','diamante','coroa','Coroa'); } 
+            else if (num === 38) { this.targetId = 'relogio'; this.targetName = 'Relógio'; add('terra','Terra',cx-w*0.35,cy); add('terra','Terra',cx+w*0.35,cy); add('terra','Terra',cx,cy); add('fogo','Fogo',cx-w*0.2,cy); add('fogo','Fogo',cx+w*0.2,cy); add('pedra','Pedra',cx-w*0.25,cy+h*0.2); add('agua','Água',cx+w*0.25,cy+h*0.2); combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal'); combo('terra','agua','lama','Lama'); combo('lama','terra','areia','Areia'); combo('areia','fogo','vidro','Vidro'); combo('metal','vidro','relogio','Relógio'); } 
+            else if (num === 39) { this.targetId = 'bussola'; this.targetName = 'Bússola'; add('terra','Terra',cx-w*0.25,cy); add('fogo','Fogo',cx+w*0.25,cy); add('fogo','Fogo',cx,cy+h*0.15); add('pedra','Pedra',cx-w*0.25,cy+h*0.2); add('pedra','Pedra',cx+w*0.25,cy+h*0.2); combo('terra','fogo','magma','Magma'); combo('magma','pedra','metal','Metal'); combo('pedra','fogo','magnetita','Magnetita'); combo('metal','magnetita','bussola','Bússola'); } 
+            else if (num === 40) { this.targetId = 'mapa'; this.targetName = 'Mapa'; add('semente','Semente',cx-w*0.3,cy-h*0.05); add('terra','Terra',cx+w*0.3,cy-h*0.05); add('terra','Terra',cx,cy-h*0.05); add('agua','Água',cx-w*0.2,cy-h*0.05); add('agua','Água',cx+w*0.2,cy-h*0.05); add('fogo','Fogo',cx-w*0.25,cy+h*0.2); add('pedra','Pedra',cx+w*0.25,cy+h*0.2); combo('semente','terra','madeira','Madeira'); combo('madeira','agua','papel','Papel'); combo('terra','fogo','magma','Magma'); combo('magma','pedra','carvao','Carvão'); combo('agua','carvao','tinta','Tinta'); combo('papel','tinta','mapa','Mapa'); }
         }
-
         tryCombine(idA, idB, newX, newY) {
             for (const c of this.combinations) {
                 if (c.matches(idA, idB)) {
@@ -1159,12 +590,9 @@
             }
             return null;
         }
-
         getHint() {
             const alive = this.elements.filter(e => e.alive).map(e => e.id);
-            for (const c of this.combinations) {
-                if (alive.includes(c.a) && alive.includes(c.b)) return { a: c.a, b: c.b, result: c.resultName };
-            }
+            for (const c of this.combinations) { if (alive.includes(c.a) && alive.includes(c.b)) return { a: c.a, b: c.b, result: c.resultName }; }
             return null;
         }
         addElement(el) { this.elements.push(el); }
@@ -1175,7 +603,6 @@
     let recreateMenuOpen = false;
 
     function toggleRecreateMenu() { recreateMenuOpen = !recreateMenuOpen; if (recreateMenuOpen) soundClick(); }
-
     function recreateElement(elementId) {
         if (game.challengeMode) { showFeedback('Modo Desafio: sem recriação!'); soundFail(); recreateMenuOpen = false; return; }
         if (game.inkTimer.current < RECREATE_COST) { showFeedback('Tinta insuficiente! (precisa de '+RECREATE_COST+')'); soundFail(); recreateMenuOpen = false; return; }
@@ -1184,10 +611,9 @@
         const el = BASIC_ELEMENTS.find(e => e.id === elementId);
         game.levelManager.addElement(new DrawingElement(el.id, el.name, nx, ny));
         spawnParticles(nx, ny, COLORS.ink, 15);
-        showFeedback(' '+el.name+' recriado! -'+RECREATE_COST+' tinta');
+        showFeedback('✦ '+el.name+' recriado! -'+RECREATE_COST+' tinta');
         recreateMenuOpen = false;
     }
-
     function useHint() {
         if (game.inkTimer.current < HINT_COST) { showFeedback('Tinta insuficiente! (precisa de '+HINT_COST+')'); soundFail(); return; }
         const hint = game.levelManager.getHint();
@@ -1202,30 +628,22 @@
         ctx.fillStyle = COLORS.shadow; roundRect(ctx,cx+3,cy+4,cw,ch,15,true,false);
         ctx.fillStyle = COLORS.paper; roundRect(ctx,cx,cy,cw,ch,15,true,false);
         ctx.strokeStyle = COLORS.ink; ctx.lineWidth = 2.5; roundRect(ctx,cx,cy,cw,ch,15,false,true);
-        ctx.fillStyle = COLORS.ink; ctx.font = 'bold 28px Caveat, cursive'; ctx.textAlign = 'center';
-        ctx.fillText('Recriar Elemento', W/2, cy+40);
-        ctx.fillStyle = COLORS.inkRed; ctx.font = '16px Kalam, cursive';
-        ctx.fillText('Custo: '+RECREATE_COST+' de tinta', W/2, cy+65);
+        ctx.fillStyle = COLORS.ink; ctx.font = 'bold 28px Caveat, cursive'; ctx.textAlign = 'center'; ctx.fillText('Recriar Elemento', W/2, cy+40);
+        ctx.fillStyle = COLORS.inkRed; ctx.font = '16px Kalam, cursive'; ctx.fillText('Custo: '+RECREATE_COST+' de tinta', W/2, cy+65);
         game.buttons = game.buttons.filter(b => !b.id.startsWith('recreate_') && b.id !== 'closeRecreate');
-        const bs = 55, gap = 12;
-        const cols = 3;
-        const tw = cols*bs+(cols-1)*gap;
-        const sx = (W-tw)/2, by = cy+90;
+        const bs = 55, gap = 12, cols = 3, tw = cols*bs+(cols-1)*gap, sx = (W-tw)/2, by = cy+90;
         BASIC_ELEMENTS.forEach((el,i) => {
-            const col = i%cols, row = Math.floor(i/cols);
-            const x = sx+col*(bs+gap), y = by+row*(bs+25);
+            const col = i%cols, row = Math.floor(i/cols), x = sx+col*(bs+gap), y = by+row*(bs+25);
             ctx.fillStyle = COLORS.paper; ctx.beginPath(); ctx.arc(x+bs/2,y+bs/2,bs/2,0,Math.PI*2); ctx.fill();
             ctx.strokeStyle = COLORS.ink; ctx.lineWidth = 2; ctx.stroke();
             drawIcon(ctx, el.id, x+bs/2, y+bs/2-3, bs*0.35, COLORS.ink);
-            ctx.fillStyle = COLORS.ink; ctx.font = '11px Kalam, cursive'; ctx.textAlign = 'center';
-            ctx.fillText(el.name, x+bs/2, y+bs+12);
+            ctx.fillStyle = COLORS.ink; ctx.font = '11px Kalam, cursive'; ctx.textAlign = 'center'; ctx.fillText(el.name, x+bs/2, y+bs+12);
             game.buttons.push({ x, y, w: bs, h: bs+20, id: 'recreate_'+el.id });
         });
         const cbw = 120, cbh = 40, cbx = (W-cbw)/2, cby = cy+ch-55;
         ctx.fillStyle = COLORS.paper; roundRect(ctx,cbx,cby,cbw,cbh,10,true,false);
         ctx.strokeStyle = COLORS.ink; ctx.lineWidth = 2; roundRect(ctx,cbx,cby,cbw,cbh,10,false,true);
-        ctx.fillStyle = COLORS.ink; ctx.font = 'bold 18px Kalam, cursive'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('Cancelar', W/2, cby+cbh/2);
+        ctx.fillStyle = COLORS.ink; ctx.font = 'bold 18px Kalam, cursive'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('Cancelar', W/2, cby+cbh/2);
         game.buttons.push({ x: cbx, y: cby, w: cbw, h: cbh, id: 'closeRecreate' });
     }
 
@@ -1330,7 +748,7 @@
             roundRect(ctx,x,y,bs,bs,10,false,true);
             ctx.fillStyle = unlocked ? COLORS.ink : COLORS.paperLine;
             ctx.font = 'bold 24px Kalam, cursive'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(unlocked ? i : '', x+bs/2, y+bs/2-(bt?6:0));
+            ctx.fillText(unlocked ? i : '🔒', x+bs/2, y+bs/2-(bt?6:0));
             if (bt) { ctx.fillStyle = COLORS.inkGold; ctx.font = 'bold 9px Kalam, cursive'; ctx.fillText('⏱'+bt.toFixed(0)+'s', x+bs/2, y+bs-10); }
             if (unlocked) game.buttons.push({ x, y, w: bs, h: bs, id: 'level_'+i });
         }
@@ -1626,7 +1044,7 @@
             a.alive = false; b.alive = false;
             game.levelManager.addElement(result); game.inkTimer.add(10);
             saveData.stats.totalCombinations++;
-            if (isNew) { saveData.discovered.push(result.id); result.isNew = true; soundDiscovery(); showFeedback(' NOVO: '+result.name+'!'); }
+            if (isNew) { saveData.discovered.push(result.id); result.isNew = true; soundDiscovery(); showFeedback('🌟 NOVO: '+result.name+'!'); }
             else showFeedback('✦ '+result.name+' criado! +10 tinta');
             saveSave(saveData); checkAchievements();
             if (result.id === game.levelManager.targetId) {
@@ -1651,48 +1069,55 @@
     function showFeedback(msg) { game.feedback = msg; game.feedbackTimer = 2.2; }
 
     function gameLoop(timestamp) {
-        if (!game.lastTime) game.lastTime = timestamp;
-        const dt = Math.min((timestamp-game.lastTime)/1000, 0.1);
-        game.lastTime = timestamp; game.menuAnim += dt;
+        // CORREÇÃO 3: Try/Catch para evitar que um erro pare o jogo inteiro
+        try {
+            if (!game.lastTime) game.lastTime = timestamp;
+            const dt = Math.min((timestamp-game.lastTime)/1000, 0.1);
+            game.lastTime = timestamp; game.menuAnim += dt;
 
-        for (let i = particles.length-1; i >= 0; i--) { particles[i].update(dt); if (particles[i].life <= 0) particles.splice(i,1); }
-        for (let i = inkTrail.length-1; i >= 0; i--) { inkTrail[i].life -= dt*2; if (inkTrail[i].life <= 0) inkTrail.splice(i,1); }
-        for (let i = scratchMarks.length-1; i >= 0; i--) { scratchMarks[i].life -= dt*0.5; if (scratchMarks[i].life <= 0) scratchMarks.splice(i,1); }
-        if (achievementPopup) { achievementPopup.timer -= dt; if (achievementPopup.timer <= 0) achievementPopup = null; }
+            for (let i = particles.length-1; i >= 0; i--) { particles[i].update(dt); if (particles[i].life <= 0) particles.splice(i,1); }
+            for (let i = inkTrail.length-1; i >= 0; i--) { inkTrail[i].life -= dt*2; if (inkTrail[i].life <= 0) inkTrail.splice(i,1); }
+            for (let i = scratchMarks.length-1; i >= 0; i--) { scratchMarks[i].life -= dt*0.5; if (scratchMarks[i].life <= 0) scratchMarks.splice(i,1); }
+            if (achievementPopup) { achievementPopup.timer -= dt; if (achievementPopup.timer <= 0) achievementPopup = null; }
 
-        if (game.screen === 'playing') {
-            for (const el of game.levelManager.elements) el.update(dt);
-            if (game.state === 'playing') {
-                game.inkTimer.update(dt); game.levelTime += dt; saveData.stats.totalTimePlayed += dt;
-                if (game.inkTimer.isEmpty) { game.state = 'failed'; game.stateTimer = 0; soundFail(); saveSave(saveData); }
-            }
-            if (game.state === 'complete' || game.state === 'failed') {
-                game.stateTimer += dt;
-                if (game.stateTimer > 3.2) {
-                    if (game.state === 'complete') {
-                        const next = game.levelManager.currentLevel+1;
-                        if (next <= game.levelManager.totalLevels) startLevel(next);
-                        else { showFeedback('🎉 Parabéns! Você completou o jogo!'); game.screen = 'menu'; }
-                    } else startLevel(game.levelManager.currentLevel);
+            if (game.screen === 'playing') {
+                for (const el of game.levelManager.elements) el.update(dt);
+                if (game.state === 'playing') {
+                    game.inkTimer.update(dt); game.levelTime += dt; saveData.stats.totalTimePlayed += dt;
+                    if (game.inkTimer.isEmpty) { game.state = 'failed'; game.stateTimer = 0; soundFail(); saveSave(saveData); }
                 }
+                if (game.state === 'complete' || game.state === 'failed') {
+                    game.stateTimer += dt;
+                    if (game.stateTimer > 3.2) {
+                        if (game.state === 'complete') {
+                            const next = game.levelManager.currentLevel+1;
+                            if (next <= game.levelManager.totalLevels) startLevel(next);
+                            else { showFeedback('🎉 Parabéns! Você completou o jogo!'); game.screen = 'menu'; }
+                        } else startLevel(game.levelManager.currentLevel);
+                    }
+                }
+                if (game.feedbackTimer > 0) game.feedbackTimer -= dt;
             }
-            if (game.feedbackTimer > 0) game.feedbackTimer -= dt;
-        }
 
-        ctx.clearRect(0, 0, W, H);
-        switch(game.screen) {
-            case 'menu': drawMenu(); break;
-            case 'levelSelect': drawLevelSelect(); break;
-            case 'album': drawAlbum(); break;
-            case 'achievements': drawAchievements(); break;
-            case 'stats': drawStats(); break;
-            case 'playing': drawGame(); break;
-            case 'resetConfirm': drawResetConfirm(); break;
+            ctx.clearRect(0, 0, W, H);
+            switch(game.screen) {
+                case 'menu': drawMenu(); break;
+                case 'levelSelect': drawLevelSelect(); break;
+                case 'album': drawAlbum(); break;
+                case 'achievements': drawAchievements(); break;
+                case 'stats': drawStats(); break;
+                case 'playing': drawGame(); break;
+                case 'resetConfirm': drawResetConfirm(); break;
+            }
+        } catch (error) {
+            console.error("Erro no Game Loop:", error);
         }
         requestAnimationFrame(gameLoop);
     }
 
-    resize(); initMenuElements(); requestAnimationFrame(gameLoop);
+    resize(); // Chamada inicial
+    initMenuElements(); 
+    requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
