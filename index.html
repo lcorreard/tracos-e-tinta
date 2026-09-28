@@ -4,9 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Traços & Tinta</title>
+    
+    <!-- PWA: Tornar instalável -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#263872">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Traços & Tinta">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    
+    <!-- Fontes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body {
@@ -24,13 +35,54 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: transform 0.2s;
         }
         #muteBtn:active { transform: scale(0.9); }
+        #installBtn {
+            position: fixed; bottom: 20px; right: 20px;
+            padding: 12px 20px; border-radius: 25px;
+            background: #2e7336; color: #f5f2e6;
+            border: 2px solid #f5f2e6; font-size: 14px; cursor: pointer;
+            z-index: 100; display: none; font-family: 'Kalam', cursive;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        #installBtn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
     <canvas id="game"></canvas>
     <button id="muteBtn" title="Som">🔊</button>
+    <button id="installBtn">📲 Instalar App</button>
 
     <script>
+    // ============================================
+    // REGISTRO DO SERVICE WORKER (PWA)
+    // ============================================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW registrado:', reg.scope))
+                .catch(err => console.log('SW falhou:', err));
+        });
+    }
+
+    // Botão de instalação PWA
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'block';
+    });
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') installBtn.style.display = 'none';
+            deferredPrompt = null;
+        }
+    });
+
+    // ============================================
+    // CONFIGURAÇÃO INICIAL
+    // ============================================
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     let W = 0, H = 0, DPR = window.devicePixelRatio || 1;
@@ -184,7 +236,7 @@
     const muteBtn = document.getElementById('muteBtn');
     muteBtn.addEventListener('click', () => {
         muted = !muted;
-        muteBtn.textContent = muted ? '🔇' : '';
+        muteBtn.textContent = muted ? '🔇' : '🔊';
         if (muted) { stopDragSound(); stopMusic(); } else { startMusic(); }
     });
 
@@ -369,7 +421,6 @@
                 ctx.beginPath(); ctx.arc(x - s*0.3, y + s*0.2, s*0.3, 0, Math.PI*2); ctx.stroke();
                 ctx.beginPath(); ctx.arc(x + s*0.2, y, s*0.35, 0, Math.PI*2); ctx.stroke();
                 ctx.beginPath(); ctx.arc(x - s*0.1, y - s*0.3, s*0.25, 0, Math.PI*2); ctx.stroke(); break;
-            // NOVOS ÍCONES (níveis 11-40)
             case 'broto':
                 ctx.beginPath(); ctx.moveTo(x, y + s*0.5); ctx.lineTo(x, y - s*0.3); ctx.stroke();
                 ctx.beginPath(); ctx.ellipse(x - s*0.25, y - s*0.1, s*0.2, s*0.3, -0.5, 0, Math.PI*2); ctx.stroke();
@@ -729,7 +780,7 @@
     let saveData = loadSave();
 
     const ACHIEVEMENTS = [
-        { id: 'first_step', name: 'Primeiro Passo', desc: 'Complete o nível 1', icon: '👣' },
+        { id: 'first_step', name: 'Primeiro Passo', desc: 'Complete o nível 1', icon: '' },
         { id: 'alchemist', name: 'Alquimista', desc: 'Descubra 10 elementos', icon: '️' },
         { id: 'collector', name: 'Colecionador', desc: 'Descubra 25 elementos', icon: '' },
         { id: 'master', name: 'Mestre', desc: 'Complete todos os 40 níveis', icon: '👑' },
@@ -767,7 +818,7 @@
         ctx.strokeStyle = COLORS.ink; ctx.lineWidth = 2;
         roundRect(ctx, (W-w)/2, y, w, 70, 12, false, true);
         ctx.fillStyle = COLORS.paper; ctx.font = 'bold 16px Kalam, cursive'; ctx.textAlign = 'left';
-        ctx.fillText(' Conquista Desbloqueada!', (W-w)/2+15, y+22);
+        ctx.fillText('🏆 Conquista Desbloqueada!', (W-w)/2+15, y+22);
         ctx.font = 'bold 20px Caveat, cursive';
         ctx.fillText(achievementPopup.ach.icon + ' ' + achievementPopup.ach.name, (W-w)/2+15, y+50);
         ctx.globalAlpha = 1;
@@ -833,7 +884,6 @@
             const add = (id, name, x, y) => this.elements.push(new DrawingElement(id, name, x, y));
             const combo = (a, b, r, rn) => this.combinations.push(new Combination(a, b, r, rn));
 
-            // NÍVEIS 1-10 (originais)
             if (num === 1) {
                 this.targetId = 'vapor'; this.targetName = 'Vapor';
                 add('agua','Água',cx-w*0.25,cy+h*0.05); add('fogo','Fogo',cx+w*0.25,cy+h*0.05);
@@ -891,9 +941,7 @@
                 add('agua','Água',cx-w*0.35,cy+h*0.05); add('ar','Ar',cx+w*0.35,cy+h*0.05);
                 add('fogo','Fogo',cx-w*0.35,cy+h*0.25); add('terra','Terra',cx+w*0.35,cy+h*0.25);
                 combo('agua','ar','nuvem','Nuvem'); combo('fogo','terra','raio','Raio'); combo('nuvem','raio','tempestade','Tempestade');
-            }
-            // NÍVEIS 11-20
-            else if (num === 11) {
+            } else if (num === 11) {
                 this.targetId = 'broto'; this.targetName = 'Broto';
                 add('semente','Semente',cx-w*0.25,cy+h*0.1); add('agua','Água',cx+w*0.25,cy+h*0.1);
                 add('terra','Terra',cx,cy+h*0.3);
@@ -954,9 +1002,7 @@
                 add('agua','Água',cx-w*0.2,cy+h*0.2); add('agua','Água',cx+w*0.2,cy+h*0.2);
                 combo('terra','terra','rocha','Rocha'); combo('rocha','rocha','montanha','Montanha');
                 combo('montanha','agua','caverna','Caverna');
-            }
-            // NÍVEIS 21-30
-            else if (num === 21) {
+            } else if (num === 21) {
                 this.targetId = 'madeira'; this.targetName = 'Madeira';
                 add('semente','Semente',cx-w*0.25,cy+h*0.1); add('terra','Terra',cx+w*0.25,cy+h*0.1);
                 add('agua','Água',cx,cy+h*0.3);
@@ -1017,9 +1063,7 @@
                 add('agua','Água',cx-w*0.2,cy+h*0.2); add('fogo','Fogo',cx+w*0.2,cy+h*0.2);
                 combo('semente','terra','madeira','Madeira'); combo('madeira','agua','papel','Papel');
                 combo('papel','fogo','pergaminho','Pergaminho');
-            }
-            // NÍVEIS 31-40
-            else if (num === 31) {
+            } else if (num === 31) {
                 this.targetId = 'pena'; this.targetName = 'Pena';
                 add('semente','Semente',cx-w*0.3,cy); add('agua','Água',cx+w*0.3,cy);
                 add('ar','Ar',cx-w*0.2,cy+h*0.2); add('ar','Ar',cx+w*0.2,cy+h*0.2);
@@ -1139,7 +1183,7 @@
         const el = BASIC_ELEMENTS.find(e => e.id === elementId);
         game.levelManager.addElement(new DrawingElement(el.id, el.name, nx, ny));
         spawnParticles(nx, ny, COLORS.ink, 15);
-        showFeedback('✦ '+el.name+' recriado! -'+RECREATE_COST+' tinta');
+        showFeedback(' '+el.name+' recriado! -'+RECREATE_COST+' tinta');
         recreateMenuOpen = false;
     }
 
@@ -1285,7 +1329,7 @@
             roundRect(ctx,x,y,bs,bs,10,false,true);
             ctx.fillStyle = unlocked ? COLORS.ink : COLORS.paperLine;
             ctx.font = 'bold 24px Kalam, cursive'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(unlocked ? i : '🔒', x+bs/2, y+bs/2-(bt?6:0));
+            ctx.fillText(unlocked ? i : '', x+bs/2, y+bs/2-(bt?6:0));
             if (bt) { ctx.fillStyle = COLORS.inkGold; ctx.font = 'bold 9px Kalam, cursive'; ctx.fillText('⏱'+bt.toFixed(0)+'s', x+bs/2, y+bs-10); }
             if (unlocked) game.buttons.push({ x, y, w: bs, h: bs, id: 'level_'+i });
         }
@@ -1429,7 +1473,7 @@
         ctx.fillText('⏱ '+game.levelTime.toFixed(1)+'s', W/2, 65);
 
         const bx = 50, by = 85, bw = W-100, bh = 16, pct = game.inkTimer.percent;
-        ctx.fillStyle = COLORS.ink; ctx.font = '12px Kalam, cursive'; ctx.textAlign = 'left'; ctx.fillText(' Tinta', bx, by-3);
+        ctx.fillStyle = COLORS.ink; ctx.font = '12px Kalam, cursive'; ctx.textAlign = 'left'; ctx.fillText('🖋 Tinta', bx, by-3);
         ctx.fillStyle = COLORS.paperDark; roundRect(ctx,bx,by,bw,bh,8,true,false);
         ctx.fillStyle = pct > 0.3 ? COLORS.ink : COLORS.inkRed;
         if (bw*pct > 0) roundRect(ctx,bx,by,Math.max(16,bw*pct),bh,8,true,false);
@@ -1627,7 +1671,7 @@
                     if (game.state === 'complete') {
                         const next = game.levelManager.currentLevel+1;
                         if (next <= game.levelManager.totalLevels) startLevel(next);
-                        else { showFeedback(' Parabéns! Você completou o jogo!'); game.screen = 'menu'; }
+                        else { showFeedback('🎉 Parabéns! Você completou o jogo!'); game.screen = 'menu'; }
                     } else startLevel(game.levelManager.currentLevel);
                 }
             }
