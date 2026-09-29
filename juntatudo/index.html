@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Merge Cosmos - Evolução</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,8 +22,8 @@
     color: #263872;
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: 15px;
+    align-items: flex-start;
+    padding: 10px;
     overflow-x: hidden;
   }
 
@@ -42,6 +42,7 @@
         #c9bfa8 44px,
         #c9bfa8 45px
       );
+    margin: 10px auto;
   }
 
   .game-container::before {
@@ -131,6 +132,7 @@
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     border: 2px solid #263872;
     user-select: none;
+    overflow: hidden;
   }
 
   .cell:hover:not(.empty) {
@@ -152,6 +154,7 @@
     background: #fff8e1;
   }
 
+  /* ✅ CORREÇÃO: Peça agora usa layout vertical (emoji em cima, badge embaixo) */
   .piece {
     display: flex;
     flex-direction: column;
@@ -159,6 +162,8 @@
     justify-content: center;
     width: 100%;
     height: 100%;
+    padding: 2px;
+    gap: 1px;
   }
 
   .piece.new-piece {
@@ -184,19 +189,21 @@
   .emoji {
     font-size: clamp(1.3rem, 5vw, 2.2rem);
     line-height: 1;
+    flex-shrink: 0;
   }
 
+  /* ✅ CORREÇÃO: Badge agora fica embaixo do emoji, não sobrepondo */
   .level-badge {
-    position: absolute;
-    top: 2px;
-    right: 2px;
     background: #263872;
     color: #f5f2e6;
-    font-size: 0.6rem;
-    padding: 2px 5px;
-    border-radius: 8px;
+    font-size: 0.55rem;
+    padding: 1px 4px;
+    border-radius: 6px;
     font-weight: bold;
     font-family: 'Kalam', cursive;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 1px;
   }
 
   .controls {
@@ -308,6 +315,7 @@
     font-weight: bold;
     font-family: 'Kalam', cursive;
     border: 2px solid #b8892f;
+    white-space: nowrap;
   }
 
   .toast.show {
@@ -325,6 +333,7 @@
     justify-content: center;
     align-items: center;
     z-index: 2000;
+    padding: 20px;
   }
 
   .victory-overlay.show {
@@ -389,13 +398,118 @@
     font-size: 1.1rem;
   }
 
+  /* ============================================
+     📱 CORREÇÕES MOBILE
+     ============================================ */
   @media (max-width: 480px) {
-    .game-container { padding: 12px; }
-    .game-container::before { left: 35px; }
-    header, .stats-bar, .board, .controls, .legend { margin-left: 45px; }
-    h1 { font-size: 2rem; }
-    .board { gap: 4px; padding: 8px; }
-    .legend-grid { grid-template-columns: repeat(3, 1fr); }
+    body {
+      padding: 5px;
+      align-items: flex-start;
+    }
+
+    .game-container {
+      padding: 10px;
+      margin: 5px auto;
+    }
+
+    .game-container::before {
+      left: 30px;
+    }
+
+    header, .stats-bar, .board, .controls, .legend {
+      margin-left: 38px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+    }
+
+    /* Tabuleiro com gap menor */
+    .board {
+      gap: 4px;
+      padding: 6px;
+    }
+
+    /* ✅ Emoji menor no mobile para não sobrepor */
+    .emoji {
+      font-size: clamp(1rem, 4vw, 1.5rem);
+    }
+
+    .level-badge {
+      font-size: 0.5rem;
+      padding: 1px 3px;
+    }
+
+    .stat-value {
+      font-size: 1.1rem;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+    }
+
+    button {
+      padding: 10px 12px;
+      font-size: 0.85rem;
+    }
+
+    /* ✅ CORREÇÃO: Legenda com 2 colunas e scroll no mobile */
+    .legend {
+      padding: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .legend-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px;
+    }
+
+    .legend-item {
+      padding: 3px;
+      font-size: 0.7rem;
+    }
+
+    .legend-item .emoji {
+      font-size: 1rem;
+    }
+
+    .legend-title {
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+    }
+
+    .victory-card {
+      padding: 25px;
+    }
+
+    .victory-card h2 {
+      font-size: 2.2rem;
+    }
+
+    .victory-card .trophy {
+      font-size: 3.5rem;
+    }
+  }
+
+  /* Scrollbar estilizada para a legenda */
+  .legend::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .legend::-webkit-scrollbar-track {
+    background: rgba(201, 191, 168, 0.3);
+    border-radius: 3px;
+  }
+
+  .legend::-webkit-scrollbar-thumb {
+    background: #263872;
+    border-radius: 3px;
   }
 </style>
 </head>
@@ -445,7 +559,7 @@
     <div class="stats">
       <div>🎯 Você alcançou o <strong>Buraco Negro</strong>!</div>
       <div>⭐ Pontuação: <strong id="finalScore">0</strong></div>
-      <div>🔬 Fusões: <strong id="finalFusions">0</strong></div>
+      <div> Fusões: <strong id="finalFusions">0</strong></div>
     </div>
     <button onclick="closeVictory()">🔄 Jogar Novamente</button>
     <button onclick="goHome()">🏠 Voltar ao Menu</button>
@@ -453,9 +567,6 @@
 </div>
 
 <script>
-  // ============================================
-  // DADOS DOS 15 NÍVEIS - TODOS COM EMOJIS
-  // ============================================
   const EVOLUTION_CHAIN = [
     { level: 1,  emoji: '\u{1F95A}', name: 'Ovo' },
     { level: 2,  emoji: '\u{1F425}', name: 'Pinto' },
@@ -477,9 +588,6 @@
   const BOARD_SIZE = 6;
   const MAX_LEVEL = 15;
 
-  // ============================================
-  // ESTADO DO JOGO
-  // ============================================
   let board = [];
   let selectedCell = null;
   let score = 0;
@@ -489,9 +597,6 @@
   let nextPieceId = 1;
   const animatedPieces = new Set();
 
-  // ============================================
-  // INICIALIZAÇÃO
-  // ============================================
   function initBoard() {
     board = [];
     for (let r = 0; r < BOARD_SIZE; r++) {
@@ -567,9 +672,6 @@
     });
   }
 
-  // ============================================
-  // LÓGICA DE CLIQUE
-  // ============================================
   function handleCellClick(row, col) {
     if (gameOver) return;
 
@@ -639,7 +741,7 @@
       const evolution = EVOLUTION_CHAIN[newLevel - 1];
       if (evolution) {
         setTimeout(() => {
-          showToast(`🎉 Evoluiu para ${evolution.emoji} ${evolution.name}!`);
+          showToast(` Evoluiu para ${evolution.emoji} ${evolution.name}!`);
         }, 400);
       }
     }
@@ -670,7 +772,7 @@
     }
 
     if (emptyCells.length === 0) {
-      showToast('️ Tabuleiro cheio! Faça uma fusão primeiro.');
+      showToast('⚠️ Tabuleiro cheio!');
       return;
     }
 
@@ -726,7 +828,7 @@
 
   function resetGame(confirmReset = true) {
     if (confirmReset) {
-      if (!confirm('Tem certeza que deseja reiniciar o jogo? Todo progresso será perdido.')) {
+      if (!confirm('Reiniciar o jogo? Todo progresso será perdido.')) {
         return;
       }
     }
@@ -740,19 +842,13 @@
     nextPieceId = 1;
     animatedPieces.clear();
     renderBoard();
-    showToast(' Jogo reiniciado!');
+    showToast('🔄 Jogo reiniciado!');
   }
 
-  // ============================================
-  // EVENT LISTENERS
-  // ============================================
   document.getElementById('spawnBtn').addEventListener('click', spawnPieces);
   document.getElementById('resetBtn').addEventListener('click', () => resetGame(true));
   document.getElementById('homeBtn').addEventListener('click', goHome);
 
-  // ============================================
-  // INÍCIO DO JOGO
-  // ============================================
   initBoard();
   renderLegend();
   renderBoard();
