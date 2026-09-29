@@ -1,1 +1,766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Merge Cosmos - Evolução</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
 
+  body {
+    font-family: 'Kalam', cursive;
+    background: #2a2520;
+    min-height: 100vh;
+    color: #263872;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    overflow-x: hidden;
+  }
+
+  .game-container {
+    max-width: 600px;
+    width: 100%;
+    background: #f5f2e6;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    position: relative;
+    background-image: 
+      repeating-linear-gradient(
+        transparent,
+        transparent 44px,
+        #c9bfa8 44px,
+        #c9bfa8 45px
+      );
+  }
+
+  .game-container::before {
+    content: '';
+    position: absolute;
+    left: 50px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #a62e2e;
+    pointer-events: none;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 15px;
+    margin-left: 60px;
+  }
+
+  h1 {
+    font-family: 'Caveat', cursive;
+    font-size: 2.5rem;
+    color: #263872;
+    margin-bottom: 5px;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    color: #3d5599;
+    font-size: 0.95rem;
+    font-style: italic;
+  }
+
+  .stats-bar {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: rgba(38, 56, 114, 0.08);
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    margin-left: 60px;
+    border: 2px solid #263872;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: #3d5599;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .stat-value {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #263872;
+    font-family: 'Caveat', cursive;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    margin-bottom: 15px;
+    margin-left: 60px;
+    padding: 10px;
+    background: rgba(201, 191, 168, 0.2);
+    border-radius: 10px;
+    border: 2px solid #263872;
+  }
+
+  .cell {
+    aspect-ratio: 1;
+    background: #faf7ee;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border: 2px solid #263872;
+    user-select: none;
+  }
+
+  .cell:hover:not(.empty) {
+    transform: translateY(-2px);
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(38, 56, 114, 0.2);
+  }
+
+  .cell.empty {
+    cursor: default;
+    background: rgba(201, 191, 168, 0.3);
+    border: 2px dashed #c9bfa8;
+  }
+
+  .cell.selected {
+    border-color: #b8892f;
+    border-width: 3px;
+    box-shadow: 0 0 15px rgba(184, 137, 47, 0.5);
+    background: #fff8e1;
+  }
+
+  .piece {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .piece.new-piece {
+    animation: popIn 0.35s ease;
+  }
+
+  .piece.evolved {
+    animation: merge 0.5s ease;
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes merge {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35) rotate(5deg); filter: brightness(1.4); }
+    100% { transform: scale(1); }
+  }
+
+  .emoji {
+    font-size: clamp(1.3rem, 5vw, 2.2rem);
+    line-height: 1;
+  }
+
+  .level-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #263872;
+    color: #f5f2e6;
+    font-size: 0.6rem;
+    padding: 2px 5px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-family: 'Kalam', cursive;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    margin-left: 60px;
+  }
+
+  button {
+    flex: 1;
+    padding: 12px 18px;
+    border: 2px solid #263872;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Kalam', cursive;
+    letter-spacing: 0.5px;
+    background: #f5f2e6;
+    color: #263872;
+  }
+
+  .btn-spawn:hover:not(:disabled) {
+    background: #263872;
+    color: #f5f2e6;
+    transform: translateY(-2px);
+  }
+
+  .btn-spawn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #c9bfa8;
+    color: #c9bfa8;
+  }
+
+  .btn-reset:hover {
+    background: #a62e2e;
+    color: #f5f2e6;
+    border-color: #a62e2e;
+    transform: translateY(-2px);
+  }
+
+  .btn-home:hover {
+    background: #2e7336;
+    color: #f5f2e6;
+    border-color: #2e7336;
+    transform: translateY(-2px);
+  }
+
+  .legend {
+    background: rgba(38, 56, 114, 0.05);
+    border-radius: 10px;
+    padding: 12px;
+    border: 2px solid #263872;
+    margin-left: 60px;
+  }
+
+  .legend-title {
+    font-family: 'Caveat', cursive;
+    font-size: 1.3rem;
+    color: #263872;
+    margin-bottom: 8px;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .legend-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 4px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    border: 1px solid #c9bfa8;
+  }
+
+  .legend-item .emoji {
+    font-size: 1.1rem;
+  }
+
+  .legend-item .lvl {
+    color: #b8892f;
+    font-weight: bold;
+    font-size: 0.7rem;
+  }
+
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: #263872;
+    color: #f5f2e6;
+    padding: 12px 24px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transition: transform 0.4s ease;
+    z-index: 1000;
+    font-weight: bold;
+    font-family: 'Kalam', cursive;
+    border: 2px solid #b8892f;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .victory-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+  }
+
+  .victory-overlay.show {
+    display: flex;
+    animation: fadeIn 0.5s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .victory-card {
+    background: #f5f2e6;
+    border-radius: 15px;
+    padding: 40px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    border: 3px solid #b8892f;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.6s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .victory-card h2 {
+    font-family: 'Caveat', cursive;
+    font-size: 3rem;
+    color: #b8892f;
+    margin-bottom: 20px;
+  }
+
+  .victory-card .trophy {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    animation: bounce 1s infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .victory-card .stats {
+    margin: 20px 0;
+    font-size: 1.1rem;
+    color: #263872;
+  }
+
+  .victory-card .stats div {
+    margin: 8px 0;
+  }
+
+  .victory-card button {
+    margin-top: 15px;
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+  }
+
+  @media (max-width: 480px) {
+    .game-container { padding: 12px; }
+    .game-container::before { left: 35px; }
+    header, .stats-bar, .board, .controls, .legend { margin-left: 45px; }
+    h1 { font-size: 2rem; }
+    .board { gap: 4px; padding: 8px; }
+    .legend-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <header>
+    <h1>🌌 Merge Cosmos</h1>
+    <div class="subtitle">combine figuras iguais para evoluir</div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-label">Pontos</div>
+      <div class="stat-value" id="score">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Fusões</div>
+      <div class="stat-value" id="fusions">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Máximo</div>
+      <div class="stat-value" id="maxLevel">1</div>
+    </div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="controls">
+    <button class="btn-spawn" id="spawnBtn">✨ Gerar Peças</button>
+    <button class="btn-reset" id="resetBtn">🔄 Reiniciar</button>
+    <button class="btn-home" id="homeBtn">🏠 Menu</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-title">📖 Tabela de Evolução</div>
+    <div class="legend-grid" id="legend"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="victory-overlay" id="victoryOverlay">
+  <div class="victory-card">
+    <div class="trophy">🏆</div>
+    <h2>Parabéns!</h2>
+    <div class="stats">
+      <div>🎯 Você alcançou o <strong>Buraco Negro</strong>!</div>
+      <div>⭐ Pontuação: <strong id="finalScore">0</strong></div>
+      <div>🔬 Fusões: <strong id="finalFusions">0</strong></div>
+    </div>
+    <button onclick="closeVictory()">🔄 Jogar Novamente</button>
+    <button onclick="goHome()">🏠 Voltar ao Menu</button>
+  </div>
+</div>
+
+<script>
+  // ============================================
+  // DADOS DOS 15 NÍVEIS - TODOS COM EMOJIS
+  // ============================================
+  const EVOLUTION_CHAIN = [
+    { level: 1,  emoji: '\u{1F95A}', name: 'Ovo' },
+    { level: 2,  emoji: '\u{1F425}', name: 'Pinto' },
+    { level: 3,  emoji: '\u{1F414}', name: 'Galinha' },
+    { level: 4,  emoji: '\u{1F331}', name: 'Broto' },
+    { level: 5,  emoji: '\u{1F333}', name: 'Árvore' },
+    { level: 6,  emoji: '\u{1F34E}', name: 'Maçã' },
+    { level: 7,  emoji: '\u{1F4A7}', name: 'Gota' },
+    { level: 8,  emoji: '\u{1F30A}', name: 'Onda' },
+    { level: 9,  emoji: '\u{26A1}', name: 'Raio' },
+    { level: 10, emoji: '\u{1F525}', name: 'Fogo' },
+    { level: 11, emoji: '\u{1F30B}', name: 'Vulcão' },
+    { level: 12, emoji: '\u{1F30D}', name: 'Terra' },
+    { level: 13, emoji: '\u{2600}\u{FE0F}', name: 'Sol' },
+    { level: 14, emoji: '\u{1F30C}', name: 'Galáxia' },
+    { level: 15, emoji: '\u{1F573}\u{FE0F}', name: 'Buraco Negro' }
+  ];
+
+  const BOARD_SIZE = 6;
+  const MAX_LEVEL = 15;
+
+  // ============================================
+  // ESTADO DO JOGO
+  // ============================================
+  let board = [];
+  let selectedCell = null;
+  let score = 0;
+  let fusions = 0;
+  let maxLevelReached = 1;
+  let gameOver = false;
+  let nextPieceId = 1;
+  const animatedPieces = new Set();
+
+  // ============================================
+  // INICIALIZAÇÃO
+  // ============================================
+  function initBoard() {
+    board = [];
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      board[r] = [];
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        board[r][c] = null;
+      }
+    }
+  }
+
+  function renderBoard() {
+    const boardEl = document.getElementById('board');
+    boardEl.innerHTML = '';
+
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.row = r;
+        cell.dataset.col = c;
+
+        const piece = board[r][c];
+        if (piece) {
+          const evolution = EVOLUTION_CHAIN[piece.level - 1];
+          const pieceEl = document.createElement('div');
+          pieceEl.className = 'piece';
+          
+          if (animatedPieces.has(piece.id)) {
+            if (piece.justEvolved) {
+              pieceEl.classList.add('evolved');
+            } else {
+              pieceEl.classList.add('new-piece');
+            }
+            setTimeout(() => {
+              animatedPieces.delete(piece.id);
+              piece.justEvolved = false;
+            }, 500);
+          }
+
+          pieceEl.innerHTML = `
+            <span class="emoji">${evolution.emoji}</span>
+            <span class="level-badge">Lv.${piece.level}</span>
+          `;
+          cell.appendChild(pieceEl);
+        } else {
+          cell.classList.add('empty');
+        }
+
+        if (selectedCell && selectedCell.row === r && selectedCell.col === c) {
+          cell.classList.add('selected');
+        }
+
+        cell.addEventListener('click', () => handleCellClick(r, c));
+        boardEl.appendChild(cell);
+      }
+    }
+
+    updateStats();
+    updateSpawnButton();
+  }
+
+  function renderLegend() {
+    const legendEl = document.getElementById('legend');
+    legendEl.innerHTML = '';
+    EVOLUTION_CHAIN.forEach(ev => {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      item.innerHTML = `
+        <span class="emoji">${ev.emoji}</span>
+        <span class="lvl">${ev.level}</span>
+      `;
+      legendEl.appendChild(item);
+    });
+  }
+
+  // ============================================
+  // LÓGICA DE CLIQUE
+  // ============================================
+  function handleCellClick(row, col) {
+    if (gameOver) return;
+
+    const piece = board[row][col];
+    if (!piece) return;
+
+    if (!selectedCell) {
+      selectedCell = { row, col };
+      renderBoard();
+      return;
+    }
+
+    if (selectedCell.row === row && selectedCell.col === col) {
+      selectedCell = null;
+      renderBoard();
+      return;
+    }
+
+    const selectedPiece = board[selectedCell.row][selectedCell.col];
+
+    if (selectedPiece.level === piece.level) {
+      mergePieces(selectedCell.row, selectedCell.col, row, col);
+      return;
+    }
+
+    selectedCell = { row, col };
+    renderBoard();
+  }
+
+  function mergePieces(fromRow, fromCol, toRow, toCol) {
+    const piece = board[toRow][toCol];
+    const newLevel = piece.level + 1;
+
+    board[fromRow][fromCol] = null;
+
+    if (newLevel > MAX_LEVEL) {
+      board[toRow][toCol] = null;
+      showToast('🏆 Nível máximo alcançado!');
+    } else {
+      board[toRow][toCol] = { 
+        level: newLevel, 
+        id: nextPieceId++,
+        justEvolved: true 
+      };
+      animatedPieces.add(board[toRow][toCol].id);
+
+      setTimeout(() => {
+        fillEmptyCell(fromRow, fromCol);
+      }, 300);
+    }
+
+    score += newLevel * 10;
+    fusions++;
+    if (newLevel > maxLevelReached && newLevel <= MAX_LEVEL) {
+      maxLevelReached = newLevel;
+    }
+
+    selectedCell = null;
+    renderBoard();
+
+    if (newLevel === MAX_LEVEL) {
+      gameOver = true;
+      setTimeout(() => showVictory(), 1000);
+    }
+
+    if (newLevel >= 13 && newLevel < MAX_LEVEL) {
+      const evolution = EVOLUTION_CHAIN[newLevel - 1];
+      if (evolution) {
+        setTimeout(() => {
+          showToast(`🎉 Evoluiu para ${evolution.emoji} ${evolution.name}!`);
+        }, 400);
+      }
+    }
+  }
+
+  function fillEmptyCell(row, col) {
+    if (board[row][col] === null && !gameOver) {
+      board[row][col] = { 
+        level: 1, 
+        id: nextPieceId++,
+        justEvolved: false 
+      };
+      animatedPieces.add(board[row][col].id);
+      renderBoard();
+    }
+  }
+
+  function spawnPieces() {
+    if (gameOver) return;
+
+    const emptyCells = [];
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (!board[r][c]) {
+          emptyCells.push({ row: r, col: c });
+        }
+      }
+    }
+
+    if (emptyCells.length === 0) {
+      showToast('️ Tabuleiro cheio! Faça uma fusão primeiro.');
+      return;
+    }
+
+    emptyCells.forEach(({ row, col }) => {
+      board[row][col] = { 
+        level: 1, 
+        id: nextPieceId++,
+        justEvolved: false 
+      };
+      animatedPieces.add(board[row][col].id);
+    });
+
+    selectedCell = null;
+    renderBoard();
+    showToast(`✨ ${emptyCells.length} peça(s) gerada(s)!`);
+  }
+
+  function updateSpawnButton() {
+    const spawnBtn = document.getElementById('spawnBtn');
+    const hasEmpty = board.some(row => row.some(cell => cell === null));
+    spawnBtn.disabled = !hasEmpty || gameOver;
+  }
+
+  function showVictory() {
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('finalFusions').textContent = fusions;
+    document.getElementById('victoryOverlay').classList.add('show');
+  }
+
+  function closeVictory() {
+    document.getElementById('victoryOverlay').classList.remove('show');
+    resetGame(false);
+  }
+
+  function goHome() {
+    window.location.href = '../index.html';
+  }
+
+  function updateStats() {
+    document.getElementById('score').textContent = score;
+    document.getElementById('fusions').textContent = fusions;
+    document.getElementById('maxLevel').textContent = maxLevelReached;
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2500);
+  }
+
+  function resetGame(confirmReset = true) {
+    if (confirmReset) {
+      if (!confirm('Tem certeza que deseja reiniciar o jogo? Todo progresso será perdido.')) {
+        return;
+      }
+    }
+    
+    initBoard();
+    selectedCell = null;
+    score = 0;
+    fusions = 0;
+    maxLevelReached = 1;
+    gameOver = false;
+    nextPieceId = 1;
+    animatedPieces.clear();
+    renderBoard();
+    showToast(' Jogo reiniciado!');
+  }
+
+  // ============================================
+  // EVENT LISTENERS
+  // ============================================
+  document.getElementById('spawnBtn').addEventListener('click', spawnPieces);
+  document.getElementById('resetBtn').addEventListener('click', () => resetGame(true));
+  document.getElementById('homeBtn').addEventListener('click', goHome);
+
+  // ============================================
+  // INÍCIO DO JOGO
+  // ============================================
+  initBoard();
+  renderLegend();
+  renderBoard();
+
+  setTimeout(() => {
+    spawnPieces();
+  }, 300);
+</script>
+
+</body>
+</html>
