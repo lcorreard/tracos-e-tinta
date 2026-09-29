@@ -154,7 +154,7 @@
     background: #fff8e1;
   }
 
-  /* ✅ CORREÇÃO: Peça agora usa layout vertical (emoji em cima, badge embaixo) */
+  /* ✅ CORREÇÃO: Peça agora só tem o emoji, centralizado */
   .piece {
     display: flex;
     flex-direction: column;
@@ -163,7 +163,6 @@
     width: 100%;
     height: 100%;
     padding: 2px;
-    gap: 1px;
   }
 
   .piece.new-piece {
@@ -182,28 +181,15 @@
 
   @keyframes merge {
     0% { transform: scale(1); }
-    40% { transform: scale(1.35) rotate(5deg); filter: brightness(1.4); }
+    40% { transform: scale(1.4) rotate(8deg); filter: brightness(1.5); }
     100% { transform: scale(1); }
   }
 
+  /* ✅ CORREÇÃO: Emoji maior */
   .emoji {
-    font-size: clamp(1.3rem, 5vw, 2.2rem);
+    font-size: clamp(1.8rem, 7vw, 2.8rem);
     line-height: 1;
     flex-shrink: 0;
-  }
-
-  /* ✅ CORREÇÃO: Badge agora fica embaixo do emoji, não sobrepondo */
-  .level-badge {
-    background: #263872;
-    color: #f5f2e6;
-    font-size: 0.55rem;
-    padding: 1px 4px;
-    border-radius: 6px;
-    font-weight: bold;
-    font-family: 'Kalam', cursive;
-    line-height: 1;
-    flex-shrink: 0;
-    margin-top: 1px;
   }
 
   .controls {
@@ -428,20 +414,14 @@
       font-size: 0.8rem;
     }
 
-    /* Tabuleiro com gap menor */
     .board {
       gap: 4px;
       padding: 6px;
     }
 
-    /* ✅ Emoji menor no mobile para não sobrepor */
+    /* ✅ Emoji maior também no mobile */
     .emoji {
-      font-size: clamp(1rem, 4vw, 1.5rem);
-    }
-
-    .level-badge {
-      font-size: 0.5rem;
-      padding: 1px 3px;
+      font-size: clamp(1.4rem, 6vw, 2rem);
     }
 
     .stat-value {
@@ -457,7 +437,6 @@
       font-size: 0.85rem;
     }
 
-    /* ✅ CORREÇÃO: Legenda com 2 colunas e scroll no mobile */
     .legend {
       padding: 8px;
       max-height: 200px;
@@ -497,7 +476,6 @@
     }
   }
 
-  /* Scrollbar estilizada para a legenda */
   .legend::-webkit-scrollbar {
     width: 6px;
   }
@@ -510,6 +488,31 @@
   .legend::-webkit-scrollbar-thumb {
     background: #263872;
     border-radius: 3px;
+  }
+
+  /* Botão de som flutuante */
+  .sound-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(38, 56, 114, 0.85);
+    color: #f5f2e6;
+    border: 2px solid #f5f2e6;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: transform 0.2s;
+  }
+
+  .sound-btn:active {
+    transform: scale(0.9);
   }
 </style>
 </head>
@@ -541,7 +544,7 @@
   <div class="controls">
     <button class="btn-spawn" id="spawnBtn">✨ Gerar Peças</button>
     <button class="btn-reset" id="resetBtn">🔄 Reiniciar</button>
-    <button class="btn-home" id="homeBtn">🏠 Menu</button>
+    <button class="btn-home" id="homeBtn"> Menu</button>
   </div>
 
   <div class="legend">
@@ -552,6 +555,9 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- ✅ Botão de som flutuante -->
+<button class="sound-btn" id="soundBtn" title="Som">🔊</button>
+
 <div class="victory-overlay" id="victoryOverlay">
   <div class="victory-card">
     <div class="trophy">🏆</div>
@@ -559,7 +565,7 @@
     <div class="stats">
       <div>🎯 Você alcançou o <strong>Buraco Negro</strong>!</div>
       <div>⭐ Pontuação: <strong id="finalScore">0</strong></div>
-      <div> Fusões: <strong id="finalFusions">0</strong></div>
+      <div>🔬 Fusões: <strong id="finalFusions">0</strong></div>
     </div>
     <button onclick="closeVictory()">🔄 Jogar Novamente</button>
     <button onclick="goHome()">🏠 Voltar ao Menu</button>
@@ -588,6 +594,136 @@
   const BOARD_SIZE = 6;
   const MAX_LEVEL = 15;
 
+  // ============================================
+  // ✅ SISTEMA DE ÁUDIO PROCEDURAL
+  // ============================================
+  let audioCtx = null;
+  let muted = false;
+  let audioInitialized = false;
+  let musicPlaying = false;
+  let musicNodes = [];
+  let musicTimeouts = [];
+
+  function initAudio() {
+    if (audioInitialized) return;
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioInitialized = true;
+    } catch(e) {
+      console.warn('Áudio não suportado');
+    }
+  }
+
+  function playTone(freq, duration, type = 'sine', volume = 0.15, attack = 0.01) {
+    if (muted || !audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    const now = audioCtx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(volume, now + attack);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    
+    osc.start(now);
+    osc.stop(now + duration);
+    
+    setTimeout(() => {
+      try { osc.disconnect(); gain.disconnect(); } catch(e) {}
+    }, duration * 1000 + 100);
+  }
+
+  function startMusic() {
+    if (muted || !audioCtx || musicPlaying) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    musicPlaying = true;
+    const scale = [261.63, 329.63, 392.00, 523.25, 659.25];
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.03;
+    masterGain.connect(audioCtx.destination);
+    musicNodes.push(masterGain);
+    
+    function playNote() {
+      if (!musicPlaying || muted) return;
+      const freq = scale[Math.floor(Math.random() * scale.length)];
+      const osc = audioCtx.createOscillator();
+      const noteGain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 900;
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      osc.connect(filter);
+      filter.connect(noteGain);
+      noteGain.connect(masterGain);
+      
+      const now = audioCtx.currentTime;
+      noteGain.gain.setValueAtTime(0, now);
+      noteGain.gain.linearRampToValueAtTime(0.4, now + 0.3);
+      noteGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+      osc.start(now);
+      osc.stop(now + 2.5);
+      
+      setTimeout(() => {
+        try { osc.disconnect(); filter.disconnect(); noteGain.disconnect(); } catch(e) {}
+      }, 2600);
+      
+      const t = setTimeout(playNote, 1200 + Math.random() * 1500);
+      musicTimeouts.push(t);
+    }
+    
+    playNote();
+    musicTimeouts.push(setTimeout(playNote, 600));
+  }
+
+  function stopMusic() {
+    musicPlaying = false;
+    musicTimeouts.forEach(clearTimeout);
+    musicTimeouts = [];
+    musicNodes.forEach(n => { try { n.disconnect(); } catch(e) {} });
+    musicNodes = [];
+  }
+
+  // Sons específicos do jogo
+  function soundSelect() { playTone(700, 0.08, 'sine', 0.15); }
+  function soundFuse() { 
+    playTone(523, 0.12, 'sine', 0.2); 
+    setTimeout(() => playTone(784, 0.15, 'sine', 0.2), 80); 
+  }
+  function soundEvolve() { 
+    [523, 659, 784, 1047].forEach((n, i) => 
+      setTimeout(() => playTone(n, 0.2, 'triangle', 0.25), i * 80)
+    ); 
+  }
+  function soundWin() { 
+    [523, 659, 784, 1047, 1318, 1568].forEach((n, i) => 
+      setTimeout(() => playTone(n, 0.3, 'sine', 0.3), i * 100)
+    ); 
+  }
+  function soundError() { 
+    playTone(220, 0.2, 'sawtooth', 0.1); 
+  }
+  function soundClick() { 
+    playTone(800, 0.06, 'square', 0.1); 
+  }
+
+  // Botão de som
+  const soundBtn = document.getElementById('soundBtn');
+  soundBtn.addEventListener('click', () => {
+    muted = !muted;
+    soundBtn.textContent = muted ? '🔇' : '🔊';
+    if (muted) stopMusic(); else startMusic();
+  });
+
+  // ============================================
+  // ESTADO DO JOGO
+  // ============================================
   let board = [];
   let selectedCell = null;
   let score = 0;
@@ -636,10 +772,8 @@
             }, 500);
           }
 
-          pieceEl.innerHTML = `
-            <span class="emoji">${evolution.emoji}</span>
-            <span class="level-badge">Lv.${piece.level}</span>
-          `;
+          // ✅ CORREÇÃO: Apenas o emoji, sem badge
+          pieceEl.innerHTML = `<span class="emoji">${evolution.emoji}</span>`;
           cell.appendChild(pieceEl);
         } else {
           cell.classList.add('empty');
@@ -680,6 +814,7 @@
 
     if (!selectedCell) {
       selectedCell = { row, col };
+      soundSelect();
       renderBoard();
       return;
     }
@@ -698,6 +833,7 @@
     }
 
     selectedCell = { row, col };
+    soundSelect();
     renderBoard();
   }
 
@@ -709,6 +845,7 @@
 
     if (newLevel > MAX_LEVEL) {
       board[toRow][toCol] = null;
+      soundEvolve();
       showToast('🏆 Nível máximo alcançado!');
     } else {
       board[toRow][toCol] = { 
@@ -717,6 +854,12 @@
         justEvolved: true 
       };
       animatedPieces.add(board[toRow][toCol].id);
+
+      if (newLevel >= 13 && newLevel < MAX_LEVEL) {
+        soundEvolve();
+      } else {
+        soundFuse();
+      }
 
       setTimeout(() => {
         fillEmptyCell(fromRow, fromCol);
@@ -741,7 +884,7 @@
       const evolution = EVOLUTION_CHAIN[newLevel - 1];
       if (evolution) {
         setTimeout(() => {
-          showToast(` Evoluiu para ${evolution.emoji} ${evolution.name}!`);
+          showToast(`🎉 Evoluiu para ${evolution.emoji} ${evolution.name}!`);
         }, 400);
       }
     }
@@ -797,6 +940,7 @@
   }
 
   function showVictory() {
+    soundWin();
     document.getElementById('finalScore').textContent = score;
     document.getElementById('finalFusions').textContent = fusions;
     document.getElementById('victoryOverlay').classList.add('show');
@@ -842,12 +986,24 @@
     nextPieceId = 1;
     animatedPieces.clear();
     renderBoard();
-    showToast('🔄 Jogo reiniciado!');
+    showToast(' Jogo reiniciado!');
+  }
+
+  // ✅ Inicia áudio no primeiro clique (política dos navegadores)
+  function handleFirstInteraction() {
+    initAudio();
+    if (!muted) startMusic();
+    document.removeEventListener('click', handleFirstInteraction);
+    document.removeEventListener('touchstart', handleFirstInteraction);
   }
 
   document.getElementById('spawnBtn').addEventListener('click', spawnPieces);
   document.getElementById('resetBtn').addEventListener('click', () => resetGame(true));
   document.getElementById('homeBtn').addEventListener('click', goHome);
+
+  // Ativa áudio no primeiro toque/clique
+  document.addEventListener('click', handleFirstInteraction);
+  document.addEventListener('touchstart', handleFirstInteraction);
 
   initBoard();
   renderLegend();
