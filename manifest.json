@@ -1,7 +1,7 @@
 {
-  "name": "Traços & Tinta",
-  "short_name": "Traços",
-  "description": "Um jogo de alquimia de desenhos - combine elementos para criar novos!",
+  "name": "Estúdio de Jogos",
+  "short_name": "Estúdio",
+  "description": "Coleção de jogos independentes",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
