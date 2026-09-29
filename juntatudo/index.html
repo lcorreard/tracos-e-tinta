@@ -17,7 +17,6 @@
 
   body {
     font-family: 'Kalam', cursive;
-    /* ✅ NOVO: Fundo cósmico escuro com gradiente */
     background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
     min-height: 100vh;
     color: #fff;
@@ -29,7 +28,6 @@
     position: relative;
   }
 
-  /* Estrelas de fundo */
   body::before {
     content: '';
     position: fixed;
@@ -58,7 +56,6 @@
   .game-container {
     max-width: 600px;
     width: 100%;
-    /* ✅ NOVO: Container com fundo translúcido cósmico */
     background: rgba(20, 25, 45, 0.85);
     backdrop-filter: blur(10px);
     border-radius: 15px;
@@ -69,7 +66,6 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  /* ✅ NOVO: Header compacto */
   header {
     text-align: center;
     margin-bottom: 10px;
@@ -92,7 +88,6 @@
     font-style: italic;
   }
 
-  /* ✅ NOVO: Botões de ação no topo, pequenos */
   .top-actions {
     display: flex;
     justify-content: flex-end;
@@ -161,13 +156,13 @@
     font-family: 'Caveat', cursive;
   }
 
-  /* ✅ NOVO: Tabuleiro maior sem margens */
+  /* ✅ CORREÇÃO: Tabuleiro 5x5 */
   .board {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
     margin-bottom: 12px;
-    padding: 10px;
+    padding: 12px;
     background: rgba(0, 0, 0, 0.4);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -176,7 +171,7 @@
   .cell {
     aspect-ratio: 1;
     background: rgba(30, 35, 60, 0.8);
-    border-radius: 10px;
+    border-radius: 12px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -236,15 +231,19 @@
     100% { transform: scale(1); }
   }
 
-  /* ✅ NOVO: Emoji bem maior */
+  /* ✅ CORREÇÃO: Emojis GIGANTES */
   .emoji {
-    font-size: clamp(2rem, 8vw, 3rem);
+    font-size: clamp(2.5rem, 11vw, 3.8rem);
     line-height: 1;
     flex-shrink: 0;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+    transition: transform 0.2s ease;
   }
 
-  /* ✅ NOVO: Botão de gerar peças em destaque */
+  .cell:hover .emoji {
+    transform: scale(1.1);
+  }
+
   .spawn-btn-container {
     margin-bottom: 10px;
   }
@@ -389,7 +388,6 @@
     color: #1e1e3f;
   }
 
-  /* ✅ NOVO: Botões flutuantes (som e tabela) */
   .floating-btn {
     position: fixed;
     width: 48px;
@@ -425,7 +423,6 @@
     color: #fff;
   }
 
-  /* ✅ NOVO: Modal da Tabela de Evolução */
   .table-modal {
     position: fixed;
     top: 0;
@@ -548,12 +545,13 @@
     }
 
     .board {
-      gap: 4px;
+      gap: 5px;
       padding: 8px;
     }
 
+    /* ✅ Emojis grandes no mobile também */
     .emoji {
-      font-size: clamp(1.5rem, 7vw, 2.2rem);
+      font-size: clamp(1.8rem, 10vw, 2.5rem);
     }
 
     .action-btn {
@@ -614,17 +612,15 @@
 </head>
 <body>
 
-<!-- ✅ NOVO: Botões flutuantes -->
-<button class="floating-btn" id="tableBtn" title="Tabela de Evolução">📖</button>
-<button class="floating-btn" id="soundBtn" title="Som">🔊</button>
+<button class="floating-btn" id="tableBtn" title="Tabela de Evolução"></button>
+<button class="floating-btn" id="soundBtn" title="Som"></button>
 
 <div class="game-container">
   <header>
-    <h1>🌌 Merge Cosmos</h1>
+    <h1> Merge Cosmos</h1>
     <div class="subtitle">combine figuras iguais para evoluir</div>
   </header>
 
-  <!-- ✅ NOVO: Botões compactos no topo -->
   <div class="top-actions">
     <button class="action-btn reset" id="resetBtn">🔄 Reiniciar</button>
     <button class="action-btn home" id="homeBtn">🏠 Menu</button>
@@ -654,7 +650,6 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- ✅ NOVO: Modal da Tabela de Evolução -->
 <div class="table-modal" id="tableModal">
   <div class="table-modal-content">
     <button class="close-modal" id="closeTable">&times;</button>
@@ -665,7 +660,7 @@
 
 <div class="victory-overlay" id="victoryOverlay">
   <div class="victory-card">
-    <div class="trophy">🏆</div>
+    <div class="trophy"></div>
     <h2>Parabéns!</h2>
     <div class="stats">
       <div>🎯 Você alcançou o <strong>Buraco Negro</strong>!</div>
@@ -696,12 +691,10 @@
     { level: 15, emoji: '\u{1F573}\u{FE0F}', name: 'Buraco Negro' }
   ];
 
-  const BOARD_SIZE = 6;
+  // ✅ CORREÇÃO: Tabuleiro 5x5 (era 6x6)
+  const BOARD_SIZE = 5;
   const MAX_LEVEL = 15;
 
-  // ============================================
-  // SISTEMA DE ÁUDIO
-  // ============================================
   let audioCtx = null;
   let muted = false;
   let audioInitialized = false;
@@ -814,13 +807,10 @@
   const soundBtn = document.getElementById('soundBtn');
   soundBtn.addEventListener('click', () => {
     muted = !muted;
-    soundBtn.textContent = muted ? '🔇' : '';
+    soundBtn.textContent = muted ? '' : '🔊';
     if (muted) stopMusic(); else startMusic();
   });
 
-  // ============================================
-  // ✅ NOVO: Modal da Tabela
-  // ============================================
   const tableBtn = document.getElementById('tableBtn');
   const tableModal = document.getElementById('tableModal');
   const closeTable = document.getElementById('closeTable');
@@ -865,9 +855,6 @@
     }
   });
 
-  // ============================================
-  // ESTADO DO JOGO
-  // ============================================
   let board = [];
   let selectedCell = null;
   let score = 0;
@@ -975,7 +962,7 @@
     if (newLevel > MAX_LEVEL) {
       board[toRow][toCol] = null;
       soundEvolve();
-      showToast('🏆 Nível máximo alcançado!');
+      showToast(' Nível máximo alcançado!');
     } else {
       board[toRow][toCol] = { 
         level: newLevel, 
@@ -1044,7 +1031,7 @@
     }
 
     if (emptyCells.length === 0) {
-      showToast('️ Tabuleiro cheio!');
+      showToast('⚠️ Tabuleiro cheio!');
       return;
     }
 
