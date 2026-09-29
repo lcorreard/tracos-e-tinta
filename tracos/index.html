@@ -6,13 +6,13 @@
     <title>Traços & Tinta</title>
     
     <!-- PWA: Tornar instalável -->
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="../manifest.json">
     <meta name="theme-color" content="#263872">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Traços & Tinta">
-    <link rel="apple-touch-icon" href="./icons/icon-192.png">
-    <link rel="icon" type="image/png" href="./icons/icon-192.png">
+    <link rel="apple-touch-icon" href="../icons/icon-192.png">
+    <link rel="icon" type="image/png" href="../icons/icon-192.png">
     
     <!-- Fontes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,9 +25,11 @@
             width: 100%; height: 100%; overflow: hidden;
             background: #2a2520; font-family: 'Kalam', cursive;
             touch-action: none; user-select: none; -webkit-user-select: none;
-            position: fixed; /* Previne scroll elástico no iOS que causa resize */
+            position: fixed;
         }
         canvas { display: block; position: absolute; top: 0; left: 0; cursor: default; }
+        
+        /* Botão Mute (canto superior direito) */
         #muteBtn {
             position: fixed; top: 15px; right: 15px;
             width: 44px; height: 44px; border-radius: 50%;
@@ -37,6 +39,19 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: transform 0.2s;
         }
         #muteBtn:active { transform: scale(0.9); }
+        
+        /* ✅ NOVO: Botão Home (canto superior esquerdo) */
+        #homeBtn {
+            position: fixed; top: 15px; left: 15px;
+            width: 44px; height: 44px; border-radius: 50%;
+            background: rgba(46, 115, 54, 0.85); color: #f5f2e6;
+            border: 2px solid #f5f2e6; font-size: 20px; cursor: pointer;
+            z-index: 100; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: transform 0.2s;
+            text-decoration: none;
+        }
+        #homeBtn:active { transform: scale(0.9); }
+        
         #installBtn {
             position: fixed; bottom: 20px; right: 20px;
             padding: 12px 20px; border-radius: 25px;
@@ -50,16 +65,25 @@
 </head>
 <body>
     <canvas id="game"></canvas>
+    <!-- ✅ NOVO: Botão Home -->
+    <button id="homeBtn" title="Voltar ao Menu">🏠</button>
     <button id="muteBtn" title="Som">🔊</button>
     <button id="installBtn">📲 Instalar App</button>
 
     <script>
     // ============================================
+    // ✅ NOVO: Evento do botão Home
+    // ============================================
+    document.getElementById('homeBtn').addEventListener('click', () => {
+        window.location.href = '../index.html';
+    });
+
+    // ============================================
     // REGISTRO DO SERVICE WORKER (PWA)
     // ============================================
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('../sw.js')
                 .then(reg => console.log('SW registrado em:', reg.scope))
                 .catch(err => console.log('SW falhou:', err));
         });
@@ -267,7 +291,6 @@
             if (this.life <= 0) return;
             ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
             if (this.isConfetti) {
-                // CORREÇÃO CRÍTICA: Desenho ultra-rápido sem save/restore/rotate para não travar celular
                 ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
             } else {
                 ctx.beginPath(); ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2); ctx.fill();
@@ -280,7 +303,7 @@
     function spawnParticles(x, y, color, count = 20) {
         for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
     }
-    function spawnConfetti(x, y, count = 30) { // REDUZIDO DE 80 PARA 30 PARA PERFORMANCE
+    function spawnConfetti(x, y, count = 30) {
         const colors = ['#a62e2e', '#2e7336', '#b8892f', '#263872', '#8b4513', '#c71585'];
         for (let i = 0; i < count; i++) {
             particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)], {
@@ -332,7 +355,7 @@
             case 'broto': ctx.beginPath(); ctx.moveTo(x, y + s*0.5); ctx.lineTo(x, y - s*0.3); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x - s*0.25, y - s*0.1, s*0.2, s*0.3, -0.5, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x + s*0.25, y - s*0.2, s*0.2, s*0.3, 0.5, 0, Math.PI*2); ctx.stroke(); break;
             case 'flor': for (let i = 0; i < 5; i++) { const a = (i/5)*Math.PI*2; ctx.beginPath(); ctx.ellipse(x + Math.cos(a)*s*0.4, y + Math.sin(a)*s*0.4, s*0.25, s*0.15, a, 0, Math.PI*2); ctx.stroke(); } ctx.beginPath(); ctx.arc(x, y, s*0.15, 0, Math.PI*2); ctx.fill(); break;
             case 'folha': ctx.beginPath(); ctx.moveTo(x - s*0.6, y + s*0.3); ctx.quadraticCurveTo(x, y - s*0.5, x + s*0.6, y + s*0.3); ctx.quadraticCurveTo(x, y + s*0.1, x - s*0.6, y + s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.5, y + s*0.2); ctx.lineTo(x + s*0.5, y + s*0.2); ctx.stroke(); break;
-            case 'fruto': ctx.beginPath(); ctx.arc(x, y + s*0.1, s*0.5, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.4); ctx.lineTo(x + s*0.1, y - s*0.7); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x + s*0.2, y - s*0.6, s*0.15, s*0.1, 0.5, 0, Math.PI*2); ctx.stroke(); break;
+            case 'fruto': ctx.beginPath(); ctx.arc(x, y + s*0.1, s*0.5, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y - s*0.4); ctx.lineTo(x + s*0.1, y - s*0.7); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x + s*0.25, y - s*0.6, s*0.2, s*0.1, 0.5, 0, Math.PI*2); ctx.stroke(); break;
             case 'lago': ctx.beginPath(); ctx.ellipse(x, y, s*0.8, s*0.4, 0, 0, Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.1); ctx.quadraticCurveTo(x, y - s*0.2, x + s*0.5, y - s*0.1); ctx.stroke(); break;
             case 'rio': ctx.beginPath(); ctx.moveTo(x - s*0.8, y - s*0.3); ctx.quadraticCurveTo(x - s*0.3, y, x, y - s*0.1); ctx.quadraticCurveTo(x + s*0.3, y - s*0.2, x + s*0.8, y + s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - s*0.8, y + s*0.1); ctx.quadraticCurveTo(x - s*0.3, y + s*0.4, x, y + s*0.3); ctx.quadraticCurveTo(x + s*0.3, y + s*0.2, x + s*0.8, y + s*0.7); ctx.stroke(); break;
             case 'cachoeira': ctx.beginPath(); ctx.moveTo(x - s*0.5, y - s*0.7); ctx.lineTo(x + s*0.5, y - s*0.7); ctx.stroke(); for (let i = 0; i < 4; i++) { const yy = y - s*0.5 + i*s*0.35; ctx.beginPath(); ctx.moveTo(x - s*0.3 + i*2, yy); ctx.lineTo(x - s*0.1, yy + s*0.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + s*0.1, yy); ctx.lineTo(x + s*0.3 - i*2, yy + s*0.3); ctx.stroke(); } break;
@@ -444,26 +467,24 @@
             bestTimes: {}, attempts: {} };
     }
     
-    let pendingSave = false; // CORREÇÃO: Controle de salvamento em lote
+    let pendingSave = false;
     function saveSave(data) {
         try {
             localStorage.setItem(SAVE_KEY, JSON.stringify(data));
             pendingSave = false;
-        } catch(e) {
-            console.warn("Erro ao salvar (possível limite de armazenamento):", e);
-        }
+        } catch(e) {}
     }
     let saveData = loadSave();
 
     const ACHIEVEMENTS = [
-        { id: 'first_step', name: 'Primeiro Passo', desc: 'Complete o nível 1', icon: '👣' },
-        { id: 'alchemist', name: 'Alquimista', desc: 'Descubra 10 elementos', icon: '⚗️' },
-        { id: 'collector', name: 'Colecionador', desc: 'Descubra 25 elementos', icon: '📚' },
+        { id: 'first_step', name: 'Primeiro Passo', desc: 'Complete o nível 1', icon: '' },
+        { id: 'alchemist', name: 'Alquimista', desc: 'Descubra 10 elementos', icon: '️' },
+        { id: 'collector', name: 'Colecionador', desc: 'Descubra 25 elementos', icon: '' },
         { id: 'master', name: 'Mestre', desc: 'Complete todos os 40 níveis', icon: '👑' },
         { id: 'perfectionist', name: 'Perfeccionista', desc: 'Complete um nível sem errar', icon: '✨' },
         { id: 'speedy', name: 'Veloz', desc: 'Complete um nível em menos de 20s', icon: '⚡' },
         { id: 'explorer', name: 'Explorador', desc: 'Descubra todos os elementos', icon: '🗺️' },
-        { id: 'survivor', name: 'Sobrevivente', desc: 'Complete com menos de 10% de tinta', icon: '🔥' },
+        { id: 'survivor', name: 'Sobrevivente', desc: 'Complete com menos de 10% de tinta', icon: '' },
         { id: 'persistent', name: 'Persistente', desc: 'Tente 10 vezes o mesmo nível', icon: '🔄' },
         { id: 'combo_king', name: 'Rei das Combos', desc: 'Faça 100 combinações', icon: '🎯' }
     ];
@@ -471,7 +492,7 @@
     function unlockAchievement(id) {
         if (saveData.achievements.includes(id)) return;
         saveData.achievements.push(id);
-        pendingSave = true; // Marca para salvar em lote, não agora
+        pendingSave = true;
         achievementPopup = { ach: ACHIEVEMENTS.find(a => a.id === id), timer: 3.5 };
         soundAchievement();
     }
@@ -932,7 +953,7 @@
         ctx.fillStyle = COLORS.paper; roundRect(ctx,cx,cy,cw,ch,15,true,false);
         ctx.strokeStyle = COLORS.inkRed; ctx.lineWidth = 3; roundRect(ctx,cx,cy,cw,ch,15,false,true);
         ctx.fillStyle = COLORS.ink; ctx.font = 'bold 26px Caveat, cursive'; ctx.textAlign = 'center';
-        ctx.fillText('⚠ Zerar Progresso?', W/2, cy+45);
+        ctx.fillText(' Zerar Progresso?', W/2, cy+45);
         ctx.font = '15px Kalam, cursive'; ctx.fillStyle = COLORS.inkLight;
         ctx.fillText('Isso apagará TODAS as conquistas,', W/2, cy+80);
         ctx.fillText('álbum e estatísticas.', W/2, cy+100);
@@ -1044,12 +1065,11 @@
             if (isNew) { saveData.discovered.push(result.id); result.isNew = true; soundDiscovery(); showFeedback('🌟 NOVO: '+result.name+'!'); }
             else showFeedback('✦ '+result.name+' criado! +10 tinta');
             
-            // CORREÇÃO: Lógica de finalização de nível otimizada
             if (result.id === game.levelManager.targetId) {
                 game.state = 'complete';
                 game.stateTimer = 0;
                 soundLevelUp();
-                spawnConfetti(W/2, H/2, 30); // REDUZIDO DE 80 PARA 30
+                spawnConfetti(W/2, H/2, 30);
 
                 const next = game.levelManager.currentLevel+1;
                 if (next > saveData.maxLevel && next <= game.levelManager.totalLevels+1) {
@@ -1063,7 +1083,6 @@
 
                 checkAchievements();
                 
-                // CORREÇÃO: Salva apenas UMA vez no final de todas as atualizações
                 if (pendingSave) {
                     saveSave(saveData);
                 }
