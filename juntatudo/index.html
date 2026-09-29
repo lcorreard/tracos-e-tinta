@@ -17,75 +17,128 @@
 
   body {
     font-family: 'Kalam', cursive;
-    background: #2a2520;
+    /* ✅ NOVO: Fundo cósmico escuro com gradiente */
+    background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
     min-height: 100vh;
-    color: #263872;
+    color: #fff;
     display: flex;
     justify-content: center;
     align-items: flex-start;
     padding: 10px;
     overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Estrelas de fundo */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      radial-gradient(2px 2px at 20px 30px, #eee, transparent),
+      radial-gradient(2px 2px at 40px 70px, #fff, transparent),
+      radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+      radial-gradient(2px 2px at 130px 80px, #fff, transparent),
+      radial-gradient(1px 1px at 160px 120px, #ddd, transparent),
+      radial-gradient(2px 2px at 200px 50px, #fff, transparent),
+      radial-gradient(1px 1px at 250px 90px, #fff, transparent),
+      radial-gradient(2px 2px at 300px 30px, #eee, transparent),
+      radial-gradient(1px 1px at 350px 100px, #fff, transparent),
+      radial-gradient(2px 2px at 400px 60px, #fff, transparent);
+    background-size: 400px 200px;
+    background-repeat: repeat;
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 0;
   }
 
   .game-container {
     max-width: 600px;
     width: 100%;
-    background: #f5f2e6;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    /* ✅ NOVO: Container com fundo translúcido cósmico */
+    background: rgba(20, 25, 45, 0.85);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     position: relative;
-    background-image: 
-      repeating-linear-gradient(
-        transparent,
-        transparent 44px,
-        #c9bfa8 44px,
-        #c9bfa8 45px
-      );
-    margin: 10px auto;
+    z-index: 1;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .game-container::before {
-    content: '';
-    position: absolute;
-    left: 50px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #a62e2e;
-    pointer-events: none;
-  }
-
+  /* ✅ NOVO: Header compacto */
   header {
     text-align: center;
-    margin-bottom: 15px;
-    margin-left: 60px;
+    margin-bottom: 10px;
   }
 
   h1 {
     font-family: 'Caveat', cursive;
-    font-size: 2.5rem;
-    color: #263872;
-    margin-bottom: 5px;
+    font-size: 2rem;
+    background: linear-gradient(90deg, #ffd700, #ff6b6b, #9b59b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 3px;
     font-weight: 700;
   }
 
   .subtitle {
-    color: #3d5599;
-    font-size: 0.95rem;
+    color: #a0a0c0;
+    font-size: 0.8rem;
     font-style: italic;
+  }
+
+  /* ✅ NOVO: Botões de ação no topo, pequenos */
+  .top-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding: 0 5px;
+  }
+
+  .action-btn {
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Kalam', cursive;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    backdrop-filter: blur(5px);
+  }
+
+  .action-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .action-btn.home:hover {
+    background: rgba(46, 115, 54, 0.4);
+    border-color: #2e7336;
+  }
+
+  .action-btn.reset:hover {
+    background: rgba(166, 46, 46, 0.4);
+    border-color: #a62e2e;
   }
 
   .stats-bar {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    background: rgba(38, 56, 114, 0.08);
-    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 12px;
     border-radius: 10px;
-    margin-bottom: 15px;
-    margin-left: 60px;
-    border: 2px solid #263872;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .stat {
@@ -95,66 +148,65 @@
   }
 
   .stat-label {
-    font-size: 0.75rem;
-    color: #3d5599;
+    font-size: 0.65rem;
+    color: #888;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
 
   .stat-value {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: bold;
-    color: #263872;
+    color: #ffd700;
     font-family: 'Caveat', cursive;
   }
 
+  /* ✅ NOVO: Tabuleiro maior sem margens */
   .board {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 6px;
-    margin-bottom: 15px;
-    margin-left: 60px;
+    margin-bottom: 12px;
     padding: 10px;
-    background: rgba(201, 191, 168, 0.2);
-    border-radius: 10px;
-    border: 2px solid #263872;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .cell {
     aspect-ratio: 1;
-    background: #faf7ee;
-    border-radius: 8px;
+    background: rgba(30, 35, 60, 0.8);
+    border-radius: 10px;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
     position: relative;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
-    border: 2px solid #263872;
+    border: 2px solid rgba(255, 255, 255, 0.15);
     user-select: none;
     overflow: hidden;
   }
 
   .cell:hover:not(.empty) {
     transform: translateY(-2px);
-    background: #fff;
-    box-shadow: 0 4px 8px rgba(38, 56, 114, 0.2);
+    background: rgba(40, 45, 80, 0.9);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
   }
 
   .cell.empty {
     cursor: default;
-    background: rgba(201, 191, 168, 0.3);
-    border: 2px dashed #c9bfa8;
+    background: rgba(20, 25, 40, 0.5);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
   }
 
   .cell.selected {
-    border-color: #b8892f;
+    border-color: #ffd700;
     border-width: 3px;
-    box-shadow: 0 0 15px rgba(184, 137, 47, 0.5);
-    background: #fff8e1;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+    background: rgba(60, 50, 20, 0.8);
   }
 
-  /* ✅ CORREÇÃO: Peça agora só tem o emoji, centralizado */
   .piece {
     display: flex;
     flex-direction: column;
@@ -162,7 +214,6 @@
     justify-content: center;
     width: 100%;
     height: 100%;
-    padding: 2px;
   }
 
   .piece.new-piece {
@@ -185,105 +236,45 @@
     100% { transform: scale(1); }
   }
 
-  /* ✅ CORREÇÃO: Emoji maior */
+  /* ✅ NOVO: Emoji bem maior */
   .emoji {
-    font-size: clamp(1.8rem, 7vw, 2.8rem);
+    font-size: clamp(2rem, 8vw, 3rem);
     line-height: 1;
     flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
   }
 
-  .controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    margin-left: 60px;
+  /* ✅ NOVO: Botão de gerar peças em destaque */
+  .spawn-btn-container {
+    margin-bottom: 10px;
   }
 
-  button {
-    flex: 1;
-    padding: 12px 18px;
-    border: 2px solid #263872;
-    border-radius: 10px;
-    font-size: 0.95rem;
+  .btn-spawn {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #667eea;
+    border-radius: 12px;
+    font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: 'Kalam', cursive;
     letter-spacing: 0.5px;
-    background: #f5f2e6;
-    color: #263872;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
   }
 
   .btn-spawn:hover:not(:disabled) {
-    background: #263872;
-    color: #f5f2e6;
     transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
   }
 
   .btn-spawn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    border-color: #c9bfa8;
-    color: #c9bfa8;
-  }
-
-  .btn-reset:hover {
-    background: #a62e2e;
-    color: #f5f2e6;
-    border-color: #a62e2e;
-    transform: translateY(-2px);
-  }
-
-  .btn-home:hover {
-    background: #2e7336;
-    color: #f5f2e6;
-    border-color: #2e7336;
-    transform: translateY(-2px);
-  }
-
-  .legend {
-    background: rgba(38, 56, 114, 0.05);
-    border-radius: 10px;
-    padding: 12px;
-    border: 2px solid #263872;
-    margin-left: 60px;
-  }
-
-  .legend-title {
-    font-family: 'Caveat', cursive;
-    font-size: 1.3rem;
-    color: #263872;
-    margin-bottom: 8px;
-    text-align: center;
-    font-weight: 700;
-  }
-
-  .legend-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 5px;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    background: rgba(255, 255, 255, 0.5);
-    padding: 4px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    border: 1px solid #c9bfa8;
-  }
-
-  .legend-item .emoji {
-    font-size: 1.1rem;
-  }
-
-  .legend-item .lvl {
-    color: #b8892f;
-    font-weight: bold;
-    font-size: 0.7rem;
+    background: rgba(100, 100, 120, 0.3);
+    border-color: rgba(100, 100, 120, 0.3);
   }
 
   .toast {
@@ -291,8 +282,8 @@
     top: 20px;
     left: 50%;
     transform: translateX(-50%) translateY(-100px);
-    background: #263872;
-    color: #f5f2e6;
+    background: rgba(38, 56, 114, 0.95);
+    color: #fff;
     padding: 12px 24px;
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -300,7 +291,7 @@
     z-index: 1000;
     font-weight: bold;
     font-family: 'Kalam', cursive;
-    border: 2px solid #b8892f;
+    border: 2px solid #ffd700;
     white-space: nowrap;
   }
 
@@ -314,7 +305,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.9);
     display: none;
     justify-content: center;
     align-items: center;
@@ -333,15 +324,16 @@
   }
 
   .victory-card {
-    background: #f5f2e6;
+    background: linear-gradient(135deg, #1e1e3f 0%, #2a2a5f 100%);
     border-radius: 15px;
     padding: 40px;
     text-align: center;
     max-width: 400px;
     width: 90%;
-    border: 3px solid #b8892f;
+    border: 3px solid #ffd700;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     animation: slideUp 0.6s ease;
+    color: #fff;
   }
 
   @keyframes slideUp {
@@ -352,7 +344,7 @@
   .victory-card h2 {
     font-family: 'Caveat', cursive;
     font-size: 3rem;
-    color: #b8892f;
+    color: #ffd700;
     margin-bottom: 20px;
   }
 
@@ -370,7 +362,7 @@
   .victory-card .stats {
     margin: 20px 0;
     font-size: 1.1rem;
-    color: #263872;
+    color: #fff;
   }
 
   .victory-card .stats div {
@@ -382,147 +374,261 @@
     width: 100%;
     padding: 15px;
     font-size: 1.1rem;
+    border: 2px solid #ffd700;
+    background: transparent;
+    color: #ffd700;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Kalam', cursive;
+    font-weight: bold;
+    transition: all 0.2s;
   }
 
-  /* ============================================
-     📱 CORREÇÕES MOBILE
-     ============================================ */
-  @media (max-width: 480px) {
-    body {
-      padding: 5px;
-      align-items: flex-start;
-    }
-
-    .game-container {
-      padding: 10px;
-      margin: 5px auto;
-    }
-
-    .game-container::before {
-      left: 30px;
-    }
-
-    header, .stats-bar, .board, .controls, .legend {
-      margin-left: 38px;
-    }
-
-    h1 {
-      font-size: 1.8rem;
-    }
-
-    .subtitle {
-      font-size: 0.8rem;
-    }
-
-    .board {
-      gap: 4px;
-      padding: 6px;
-    }
-
-    /* ✅ Emoji maior também no mobile */
-    .emoji {
-      font-size: clamp(1.4rem, 6vw, 2rem);
-    }
-
-    .stat-value {
-      font-size: 1.1rem;
-    }
-
-    .stat-label {
-      font-size: 0.65rem;
-    }
-
-    button {
-      padding: 10px 12px;
-      font-size: 0.85rem;
-    }
-
-    .legend {
-      padding: 8px;
-      max-height: 200px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .legend-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 4px;
-    }
-
-    .legend-item {
-      padding: 3px;
-      font-size: 0.7rem;
-    }
-
-    .legend-item .emoji {
-      font-size: 1rem;
-    }
-
-    .legend-title {
-      font-size: 1.1rem;
-      margin-bottom: 6px;
-    }
-
-    .victory-card {
-      padding: 25px;
-    }
-
-    .victory-card h2 {
-      font-size: 2.2rem;
-    }
-
-    .victory-card .trophy {
-      font-size: 3.5rem;
-    }
+  .victory-card button:hover {
+    background: #ffd700;
+    color: #1e1e3f;
   }
 
-  .legend::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .legend::-webkit-scrollbar-track {
-    background: rgba(201, 191, 168, 0.3);
-    border-radius: 3px;
-  }
-
-  .legend::-webkit-scrollbar-thumb {
-    background: #263872;
-    border-radius: 3px;
-  }
-
-  /* Botão de som flutuante */
-  .sound-btn {
+  /* ✅ NOVO: Botões flutuantes (som e tabela) */
+  .floating-btn {
     position: fixed;
-    top: 15px;
-    right: 15px;
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    background: rgba(38, 56, 114, 0.85);
-    color: #f5f2e6;
-    border: 2px solid #f5f2e6;
-    font-size: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    font-size: 22px;
     cursor: pointer;
     z-index: 100;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    transition: transform 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s, background 0.2s;
+    backdrop-filter: blur(10px);
   }
 
-  .sound-btn:active {
+  .floating-btn:active {
     transform: scale(0.9);
+  }
+
+  #soundBtn {
+    top: 15px;
+    right: 15px;
+    background: rgba(38, 56, 114, 0.85);
+    color: #fff;
+  }
+
+  #tableBtn {
+    top: 15px;
+    left: 15px;
+    background: rgba(184, 137, 47, 0.85);
+    color: #fff;
+  }
+
+  /* ✅ NOVO: Modal da Tabela de Evolução */
+  .table-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1500;
+    padding: 20px;
+    backdrop-filter: blur(5px);
+  }
+
+  .table-modal.show {
+    display: flex;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .table-modal-content {
+    background: linear-gradient(135deg, #1e1e3f 0%, #2a2a5f 100%);
+    border-radius: 15px;
+    padding: 25px;
+    max-width: 500px;
+    width: 95%;
+    max-height: 80vh;
+    overflow-y: auto;
+    border: 2px solid #ffd700;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    position: relative;
+  }
+
+  .table-modal-content h2 {
+    font-family: 'Caveat', cursive;
+    font-size: 2rem;
+    color: #ffd700;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  .close-modal {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.8rem;
+    cursor: pointer;
+    width: auto;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .close-modal:hover {
+    color: #ffd700;
+    background: transparent;
+    transform: none;
+  }
+
+  .evolution-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .evolution-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .evolution-item .evo-emoji {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+
+  .evolution-item .evo-info {
+    flex: 1;
+  }
+
+  .evolution-item .evo-name {
+    color: #fff;
+    font-weight: bold;
+    font-size: 1rem;
+  }
+
+  .evolution-item .evo-level {
+    color: #ffd700;
+    font-size: 0.8rem;
+  }
+
+  .evolution-arrow {
+    text-align: center;
+    color: #ffd700;
+    font-size: 1.2rem;
+    margin: 2px 0;
+  }
+
+  @media (max-width: 480px) {
+    body {
+      padding: 5px;
+    }
+
+    .game-container {
+      padding: 10px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+    }
+
+    .subtitle {
+      font-size: 0.7rem;
+    }
+
+    .board {
+      gap: 4px;
+      padding: 8px;
+    }
+
+    .emoji {
+      font-size: clamp(1.5rem, 7vw, 2.2rem);
+    }
+
+    .action-btn {
+      padding: 5px 10px;
+      font-size: 0.7rem;
+    }
+
+    .stat-value {
+      font-size: 1rem;
+    }
+
+    .stat-label {
+      font-size: 0.6rem;
+    }
+
+    .btn-spawn {
+      padding: 12px;
+      font-size: 0.9rem;
+    }
+
+    .floating-btn {
+      width: 42px;
+      height: 42px;
+      font-size: 18px;
+    }
+
+    .table-modal-content {
+      padding: 20px 15px;
+    }
+
+    .table-modal-content h2 {
+      font-size: 1.6rem;
+    }
+
+    .evolution-item .evo-emoji {
+      font-size: 1.6rem;
+    }
+
+    .evolution-item .evo-name {
+      font-size: 0.9rem;
+    }
+  }
+
+  .table-modal-content::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .table-modal-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  .table-modal-content::-webkit-scrollbar-thumb {
+    background: #ffd700;
+    border-radius: 3px;
   }
 </style>
 </head>
 <body>
+
+<!-- ✅ NOVO: Botões flutuantes -->
+<button class="floating-btn" id="tableBtn" title="Tabela de Evolução">📖</button>
+<button class="floating-btn" id="soundBtn" title="Som">🔊</button>
 
 <div class="game-container">
   <header>
     <h1>🌌 Merge Cosmos</h1>
     <div class="subtitle">combine figuras iguais para evoluir</div>
   </header>
+
+  <!-- ✅ NOVO: Botões compactos no topo -->
+  <div class="top-actions">
+    <button class="action-btn reset" id="resetBtn">🔄 Reiniciar</button>
+    <button class="action-btn home" id="homeBtn">🏠 Menu</button>
+  </div>
 
   <div class="stats-bar">
     <div class="stat">
@@ -541,22 +647,21 @@
 
   <div class="board" id="board"></div>
 
-  <div class="controls">
-    <button class="btn-spawn" id="spawnBtn">✨ Gerar Peças</button>
-    <button class="btn-reset" id="resetBtn">🔄 Reiniciar</button>
-    <button class="btn-home" id="homeBtn"> Menu</button>
-  </div>
-
-  <div class="legend">
-    <div class="legend-title">📖 Tabela de Evolução</div>
-    <div class="legend-grid" id="legend"></div>
+  <div class="spawn-btn-container">
+    <button class="btn-spawn" id="spawnBtn">✨ Gerar Peças Nível 1</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<!-- ✅ Botão de som flutuante -->
-<button class="sound-btn" id="soundBtn" title="Som">🔊</button>
+<!-- ✅ NOVO: Modal da Tabela de Evolução -->
+<div class="table-modal" id="tableModal">
+  <div class="table-modal-content">
+    <button class="close-modal" id="closeTable">&times;</button>
+    <h2>📖 Tabela de Evolução</h2>
+    <div class="evolution-list" id="evolutionList"></div>
+  </div>
+</div>
 
 <div class="victory-overlay" id="victoryOverlay">
   <div class="victory-card">
@@ -595,7 +700,7 @@
   const MAX_LEVEL = 15;
 
   // ============================================
-  // ✅ SISTEMA DE ÁUDIO PROCEDURAL
+  // SISTEMA DE ÁUDIO
   // ============================================
   let audioCtx = null;
   let muted = false;
@@ -609,9 +714,7 @@
     try {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       audioInitialized = true;
-    } catch(e) {
-      console.warn('Áudio não suportado');
-    }
+    } catch(e) {}
   }
 
   function playTone(freq, duration, type = 'sine', volume = 0.15, attack = 0.01) {
@@ -690,7 +793,6 @@
     musicNodes = [];
   }
 
-  // Sons específicos do jogo
   function soundSelect() { playTone(700, 0.08, 'sine', 0.15); }
   function soundFuse() { 
     playTone(523, 0.12, 'sine', 0.2); 
@@ -706,19 +808,61 @@
       setTimeout(() => playTone(n, 0.3, 'sine', 0.3), i * 100)
     ); 
   }
-  function soundError() { 
-    playTone(220, 0.2, 'sawtooth', 0.1); 
-  }
-  function soundClick() { 
-    playTone(800, 0.06, 'square', 0.1); 
-  }
+  function soundError() { playTone(220, 0.2, 'sawtooth', 0.1); }
+  function soundClick() { playTone(800, 0.06, 'square', 0.1); }
 
-  // Botão de som
   const soundBtn = document.getElementById('soundBtn');
   soundBtn.addEventListener('click', () => {
     muted = !muted;
-    soundBtn.textContent = muted ? '🔇' : '🔊';
+    soundBtn.textContent = muted ? '🔇' : '';
     if (muted) stopMusic(); else startMusic();
+  });
+
+  // ============================================
+  // ✅ NOVO: Modal da Tabela
+  // ============================================
+  const tableBtn = document.getElementById('tableBtn');
+  const tableModal = document.getElementById('tableModal');
+  const closeTable = document.getElementById('closeTable');
+  const evolutionList = document.getElementById('evolutionList');
+
+  function renderEvolutionTable() {
+    evolutionList.innerHTML = '';
+    EVOLUTION_CHAIN.forEach((ev, index) => {
+      const item = document.createElement('div');
+      item.className = 'evolution-item';
+      item.innerHTML = `
+        <span class="evo-emoji">${ev.emoji}</span>
+        <div class="evo-info">
+          <div class="evo-name">${ev.name}</div>
+          <div class="evo-level">Nível ${ev.level}</div>
+        </div>
+      `;
+      evolutionList.appendChild(item);
+
+      if (index < EVOLUTION_CHAIN.length - 1) {
+        const arrow = document.createElement('div');
+        arrow.className = 'evolution-arrow';
+        arrow.textContent = '⬇️';
+        evolutionList.appendChild(arrow);
+      }
+    });
+  }
+
+  tableBtn.addEventListener('click', () => {
+    soundClick();
+    tableModal.classList.add('show');
+  });
+
+  closeTable.addEventListener('click', () => {
+    soundClick();
+    tableModal.classList.remove('show');
+  });
+
+  tableModal.addEventListener('click', (e) => {
+    if (e.target === tableModal) {
+      tableModal.classList.remove('show');
+    }
   });
 
   // ============================================
@@ -772,7 +916,6 @@
             }, 500);
           }
 
-          // ✅ CORREÇÃO: Apenas o emoji, sem badge
           pieceEl.innerHTML = `<span class="emoji">${evolution.emoji}</span>`;
           cell.appendChild(pieceEl);
         } else {
@@ -790,20 +933,6 @@
 
     updateStats();
     updateSpawnButton();
-  }
-
-  function renderLegend() {
-    const legendEl = document.getElementById('legend');
-    legendEl.innerHTML = '';
-    EVOLUTION_CHAIN.forEach(ev => {
-      const item = document.createElement('div');
-      item.className = 'legend-item';
-      item.innerHTML = `
-        <span class="emoji">${ev.emoji}</span>
-        <span class="lvl">${ev.level}</span>
-      `;
-      legendEl.appendChild(item);
-    });
   }
 
   function handleCellClick(row, col) {
@@ -915,7 +1044,7 @@
     }
 
     if (emptyCells.length === 0) {
-      showToast('⚠️ Tabuleiro cheio!');
+      showToast('️ Tabuleiro cheio!');
       return;
     }
 
@@ -986,10 +1115,9 @@
     nextPieceId = 1;
     animatedPieces.clear();
     renderBoard();
-    showToast(' Jogo reiniciado!');
+    showToast('🔄 Jogo reiniciado!');
   }
 
-  // ✅ Inicia áudio no primeiro clique (política dos navegadores)
   function handleFirstInteraction() {
     initAudio();
     if (!muted) startMusic();
@@ -1001,12 +1129,11 @@
   document.getElementById('resetBtn').addEventListener('click', () => resetGame(true));
   document.getElementById('homeBtn').addEventListener('click', goHome);
 
-  // Ativa áudio no primeiro toque/clique
   document.addEventListener('click', handleFirstInteraction);
   document.addEventListener('touchstart', handleFirstInteraction);
 
   initBoard();
-  renderLegend();
+  renderEvolutionTable();
   renderBoard();
 
   setTimeout(() => {
