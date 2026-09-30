@@ -1,15 +1,15 @@
 {
-  "name": "Estúdio de Jogos",
-  "short_name": "Estúdio",
-  "description": "Coleção de jogos independentes",
-  "start_url": "./index.html",
+  "name": "JuntaTudo",
+  "short_name": "JuntaTudo",
+  "description": "Combine figuras iguais e evolua até o nível máximo! Jogo de puzzle e estratégia.",
+  "start_url": "./juntatudo/",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f5f2e6",
-  "theme_color": "#263872",
+  "background_color": "#090a0f",
+  "theme_color": "#090a0f",
   "lang": "pt-BR",
-  "categories": ["games", "puzzle"],
+  "categories": ["games", "puzzle", "strategy"],
   "icons": [
     {
       "src": "./icons/icon-192.png",
