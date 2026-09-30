@@ -3,17 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Merge Cosmos - Evolução</title>
+<title>JuntaTudo - Evolução</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
   body {
     font-family: 'Kalam', cursive;
@@ -31,10 +26,8 @@
   body::before {
     content: '';
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     background-image: 
       radial-gradient(2px 2px at 20px 30px, #eee, transparent),
       radial-gradient(2px 2px at 40px 70px, #fff, transparent),
@@ -66,10 +59,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  header {
-    text-align: center;
-    margin-bottom: 10px;
-  }
+  header { text-align: center; margin-bottom: 10px; }
 
   h1 {
     font-family: 'Caveat', cursive;
@@ -82,11 +72,7 @@
     font-weight: 700;
   }
 
-  .subtitle {
-    color: #a0a0c0;
-    font-size: 0.8rem;
-    font-style: italic;
-  }
+  .subtitle { color: #a0a0c0; font-size: 0.8rem; font-style: italic; }
 
   .top-actions {
     display: flex;
@@ -94,6 +80,7 @@
     gap: 6px;
     margin-bottom: 10px;
     padding: 0 5px;
+    flex-wrap: wrap;
   }
 
   .action-btn {
@@ -110,20 +97,10 @@
     backdrop-filter: blur(5px);
   }
 
-  .action-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-1px);
-  }
-
-  .action-btn.home:hover {
-    background: rgba(46, 115, 54, 0.4);
-    border-color: #2e7336;
-  }
-
-  .action-btn.reset:hover {
-    background: rgba(166, 46, 46, 0.4);
-    border-color: #a62e2e;
-  }
+  .action-btn:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-1px); }
+  .action-btn.home:hover { background: rgba(46, 115, 54, 0.4); border-color: #2e7336; }
+  .action-btn.reset:hover { background: rgba(166, 46, 46, 0.4); border-color: #a62e2e; }
+  .action-btn.save:hover { background: rgba(102, 126, 234, 0.4); border-color: #667eea; }
 
   .stats-bar {
     display: flex;
@@ -136,27 +113,10 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+  .stat { display: flex; flex-direction: column; align-items: center; }
+  .stat-label { font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-value { font-size: 1.2rem; font-weight: bold; color: #ffd700; font-family: 'Caveat', cursive; }
 
-  .stat-label {
-    font-size: 0.65rem;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .stat-value {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #ffd700;
-    font-family: 'Caveat', cursive;
-  }
-
-  /* ✅ CORREÇÃO: Tabuleiro 5x5 */
   .board {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -183,16 +143,24 @@
     overflow: hidden;
   }
 
-  .cell:hover:not(.empty) {
+  .cell:hover:not(.empty):not(.blocked) {
     transform: translateY(-2px);
     background: rgba(40, 45, 80, 0.9);
     box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
   }
 
-  .cell.empty {
-    cursor: default;
-    background: rgba(20, 25, 40, 0.5);
-    border: 2px dashed rgba(255, 255, 255, 0.1);
+  .cell.empty { cursor: default; background: rgba(20, 25, 40, 0.5); border: 2px dashed rgba(255, 255, 255, 0.1); }
+  
+  .cell.blocked {
+    cursor: not-allowed;
+    background: rgba(80, 20, 20, 0.6);
+    border: 2px solid #a62e2e;
+  }
+  
+  .cell.blocked::after {
+    content: '🔒';
+    font-size: 1.5rem;
+    opacity: 0.7;
   }
 
   .cell.selected {
@@ -202,51 +170,118 @@
     background: rgba(60, 50, 20, 0.8);
   }
 
-  .piece {
+  .piece { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; }
+  .piece.new-piece { animation: popIn 0.35s ease; }
+  .piece.evolved { animation: merge 0.5s ease; }
+
+  @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes merge { 0% { transform: scale(1); } 40% { transform: scale(1.4) rotate(8deg); filter: brightness(1.5); } 100% { transform: scale(1); } }
+
+  .emoji { font-size: clamp(2.5rem, 11vw, 3.8rem); line-height: 1; flex-shrink: 0; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); transition: transform 0.2s ease; }
+  .cell:hover .emoji { transform: scale(1.1); }
+
+  .powerups-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    justify-content: center;
+  }
+
+  /* ✅ NOVO: Power-ups com tooltip */
+  .powerup-wrapper {
+    flex: 1;
+    position: relative;
+  }
+
+  .powerup-btn {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Kalam', cursive;
+    font-size: 0.85rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
+    gap: 4px;
+    position: relative;
   }
 
-  .piece.new-piece {
-    animation: popIn 0.35s ease;
+  .powerup-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); transform: translateY(-2px); }
+  .powerup-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .powerup-btn .icon { font-size: 1.5rem; }
+  .powerup-btn .count { font-size: 0.7rem; color: #ffd700; }
+
+  /* ✅ NOVO: Tooltip dos power-ups */
+  .powerup-tooltip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: rgba(20, 25, 45, 0.98);
+    border: 2px solid #ffd700;
+    border-radius: 12px;
+    padding: 12px;
+    width: 220px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
   }
 
-  .piece.evolved {
-    animation: merge 0.5s ease;
+  .powerup-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 8px solid transparent;
+    border-top-color: #ffd700;
   }
 
-  @keyframes popIn {
-    0% { transform: scale(0); opacity: 0; }
-    60% { transform: scale(1.2); }
-    100% { transform: scale(1); opacity: 1; }
+  .powerup-wrapper:hover .powerup-tooltip,
+  .powerup-wrapper.show-tooltip .powerup-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
   }
 
-  @keyframes merge {
-    0% { transform: scale(1); }
-    40% { transform: scale(1.4) rotate(8deg); filter: brightness(1.5); }
-    100% { transform: scale(1); }
+  .tooltip-title {
+    font-family: 'Caveat', cursive;
+    font-size: 1.3rem;
+    color: #ffd700;
+    margin-bottom: 6px;
+    font-weight: 700;
   }
 
-  /* ✅ CORREÇÃO: Emojis GIGANTES */
-  .emoji {
-    font-size: clamp(2.5rem, 11vw, 3.8rem);
-    line-height: 1;
-    flex-shrink: 0;
-    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
-    transition: transform 0.2s ease;
+  .tooltip-desc {
+    font-size: 0.8rem;
+    color: #fff;
+    margin-bottom: 6px;
+    line-height: 1.3;
   }
 
-  .cell:hover .emoji {
-    transform: scale(1.1);
+  .tooltip-tip {
+    font-size: 0.75rem;
+    color: #a0a0c0;
+    font-style: italic;
+    border-top: 1px solid rgba(255, 215, 0, 0.3);
+    padding-top: 6px;
+    margin-top: 6px;
   }
 
-  .spawn-btn-container {
-    margin-bottom: 10px;
+  .tooltip-tip::before {
+    content: '💡 ';
   }
+
+  .spawn-btn-container { margin-bottom: 10px; }
 
   .btn-spawn {
     width: 100%;
@@ -258,23 +293,13 @@
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: 'Kalam', cursive;
-    letter-spacing: 0.5px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
   }
 
-  .btn-spawn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-  }
-
-  .btn-spawn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    background: rgba(100, 100, 120, 0.3);
-    border-color: rgba(100, 100, 120, 0.3);
-  }
+  .btn-spawn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6); }
+  .btn-spawn:disabled { opacity: 0.4; cursor: not-allowed; background: rgba(100, 100, 120, 0.3); border-color: rgba(100, 100, 120, 0.3); }
 
   .toast {
     position: fixed;
@@ -294,16 +319,12 @@
     white-space: nowrap;
   }
 
-  .toast.show {
-    transform: translateX(-50%) translateY(0);
-  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
 
-  .victory-overlay {
+  .victory-overlay, .table-modal, .achievements-modal, .save-modal {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.9);
     display: none;
     justify-content: center;
@@ -312,67 +333,45 @@
     padding: 20px;
   }
 
-  .victory-overlay.show {
-    display: flex;
-    animation: fadeIn 0.5s ease;
-  }
+  .victory-overlay.show, .table-modal.show, .achievements-modal.show, .save-modal.show { display: flex; animation: fadeIn 0.5s ease; }
 
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-  .victory-card {
+  .victory-card, .modal-content {
     background: linear-gradient(135deg, #1e1e3f 0%, #2a2a5f 100%);
     border-radius: 15px;
-    padding: 40px;
+    padding: 30px;
     text-align: center;
-    max-width: 400px;
-    width: 90%;
+    max-width: 500px;
+    width: 95%;
     border: 3px solid #ffd700;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     animation: slideUp 0.6s ease;
     color: #fff;
+    max-height: 90vh;
+    overflow-y: auto;
   }
 
-  @keyframes slideUp {
-    from { transform: translateY(50px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
+  @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-  .victory-card h2 {
+  .victory-card h2, .modal-content h2 {
     font-family: 'Caveat', cursive;
-    font-size: 3rem;
+    font-size: 2.5rem;
     color: #ffd700;
     margin-bottom: 20px;
   }
 
-  .victory-card .trophy {
-    font-size: 5rem;
-    margin-bottom: 20px;
-    animation: bounce 1s infinite;
-  }
+  .victory-card .trophy { font-size: 4rem; margin-bottom: 15px; animation: bounce 1s infinite; }
+  @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
+  .victory-card .stats, .modal-content .stats { margin: 20px 0; font-size: 1rem; color: #fff; }
+  .victory-card .stats div, .modal-content .stats div { margin: 8px 0; }
 
-  .victory-card .stats {
-    margin: 20px 0;
-    font-size: 1.1rem;
-    color: #fff;
-  }
-
-  .victory-card .stats div {
-    margin: 8px 0;
-  }
-
-  .victory-card button {
-    margin-top: 15px;
+  .victory-card button, .modal-content button {
+    margin-top: 12px;
     width: 100%;
-    padding: 15px;
-    font-size: 1.1rem;
+    padding: 12px;
+    font-size: 1rem;
     border: 2px solid #ffd700;
     background: transparent;
     color: #ffd700;
@@ -383,10 +382,42 @@
     transition: all 0.2s;
   }
 
-  .victory-card button:hover {
-    background: #ffd700;
-    color: #1e1e3f;
+  .victory-card button:hover, .modal-content button:hover { background: #ffd700; color: #1e1e3f; }
+
+  .close-modal {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.8rem;
+    cursor: pointer;
+    width: auto;
+    padding: 0;
+    box-shadow: none;
   }
+
+  .close-modal:hover { color: #ffd700; background: transparent; transform: none; }
+
+  .achievement-list { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+
+  .achievement-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .achievement-item.unlocked { background: rgba(255, 215, 0, 0.1); border-color: #ffd700; }
+  .achievement-item .ach-icon { font-size: 2rem; flex-shrink: 0; }
+  .achievement-item .ach-info { flex: 1; }
+  .achievement-item .ach-name { color: #fff; font-weight: bold; font-size: 1rem; }
+  .achievement-item .ach-desc { color: #a0a0c0; font-size: 0.85rem; }
+  .achievement-item .ach-status { font-size: 1.5rem; }
 
   .floating-btn {
     position: fixed;
@@ -405,90 +436,12 @@
     backdrop-filter: blur(10px);
   }
 
-  .floating-btn:active {
-    transform: scale(0.9);
-  }
+  .floating-btn:active { transform: scale(0.9); }
+  #soundBtn { top: 15px; right: 15px; background: rgba(38, 56, 114, 0.85); color: #fff; }
+  #tableBtn { top: 15px; left: 15px; background: rgba(184, 137, 47, 0.85); color: #fff; }
+  #achievementsBtn { top: 70px; left: 15px; background: rgba(155, 89, 182, 0.85); color: #fff; }
 
-  #soundBtn {
-    top: 15px;
-    right: 15px;
-    background: rgba(38, 56, 114, 0.85);
-    color: #fff;
-  }
-
-  #tableBtn {
-    top: 15px;
-    left: 15px;
-    background: rgba(184, 137, 47, 0.85);
-    color: #fff;
-  }
-
-  .table-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 1500;
-    padding: 20px;
-    backdrop-filter: blur(5px);
-  }
-
-  .table-modal.show {
-    display: flex;
-    animation: fadeIn 0.3s ease;
-  }
-
-  .table-modal-content {
-    background: linear-gradient(135deg, #1e1e3f 0%, #2a2a5f 100%);
-    border-radius: 15px;
-    padding: 25px;
-    max-width: 500px;
-    width: 95%;
-    max-height: 80vh;
-    overflow-y: auto;
-    border: 2px solid #ffd700;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    position: relative;
-  }
-
-  .table-modal-content h2 {
-    font-family: 'Caveat', cursive;
-    font-size: 2rem;
-    color: #ffd700;
-    text-align: center;
-    margin-bottom: 15px;
-  }
-
-  .close-modal {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: transparent;
-    border: none;
-    color: #fff;
-    font-size: 1.8rem;
-    cursor: pointer;
-    width: auto;
-    padding: 0;
-    box-shadow: none;
-  }
-
-  .close-modal:hover {
-    color: #ffd700;
-    background: transparent;
-    transform: none;
-  }
-
-  .evolution-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+  .evolution-list { display: flex; flex-direction: column; gap: 8px; }
 
   .evolution-item {
     display: flex;
@@ -500,131 +453,137 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .evolution-item .evo-emoji {
-    font-size: 2rem;
-    flex-shrink: 0;
+  .evolution-item .evo-emoji { font-size: 2rem; flex-shrink: 0; }
+  .evolution-item .evo-info { flex: 1; }
+  .evolution-item .evo-name { color: #fff; font-weight: bold; font-size: 1rem; }
+  .evolution-item .evo-level { color: #ffd700; font-size: 0.8rem; }
+  .evolution-arrow { text-align: center; color: #ffd700; font-size: 1.2rem; margin: 2px 0; }
+
+  .chain-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    padding: 5px 0;
   }
 
-  .evolution-item .evo-info {
+  .chain-btn {
     flex: 1;
-  }
-
-  .evolution-item .evo-name {
+    min-width: 80px;
+    padding: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
     color: #fff;
-    font-weight: bold;
-    font-size: 1rem;
-  }
-
-  .evolution-item .evo-level {
-    color: #ffd700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Kalam', cursive;
     font-size: 0.8rem;
+    text-align: center;
   }
 
-  .evolution-arrow {
-    text-align: center;
-    color: #ffd700;
-    font-size: 1.2rem;
-    margin: 2px 0;
+  .chain-btn:hover { background: rgba(255, 255, 255, 0.2); }
+  .chain-btn.active { border-color: #ffd700; background: rgba(255, 215, 0, 0.2); }
+
+  .mode-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
   }
+
+  .mode-btn {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Kalam', cursive;
+    font-size: 0.9rem;
+  }
+
+  .mode-btn:hover { background: rgba(255, 255, 255, 0.2); }
+  .mode-btn.active { border-color: #ff6b6b; background: rgba(255, 107, 107, 0.2); }
+
+  .save-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(46, 115, 54, 0.9);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-family: 'Kalam', cursive;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 999;
+  }
+
+  .save-indicator.show { opacity: 1; }
 
   @media (max-width: 480px) {
-    body {
-      padding: 5px;
-    }
-
-    .game-container {
+    body { padding: 5px; }
+    .game-container { padding: 10px; }
+    h1 { font-size: 1.6rem; }
+    .subtitle { font-size: 0.7rem; }
+    .board { gap: 5px; padding: 8px; }
+    .emoji { font-size: clamp(1.8rem, 10vw, 2.5rem); }
+    .action-btn { padding: 5px 10px; font-size: 0.7rem; }
+    .stat-value { font-size: 1rem; }
+    .stat-label { font-size: 0.6rem; }
+    .btn-spawn { padding: 12px; font-size: 0.9rem; }
+    .floating-btn { width: 42px; height: 42px; font-size: 18px; }
+    .powerup-btn { padding: 8px; font-size: 0.75rem; }
+    .powerup-btn .icon { font-size: 1.2rem; }
+    .chain-btn { min-width: 70px; font-size: 0.7rem; padding: 6px; }
+    .modal-content { padding: 20px 15px; }
+    .modal-content h2 { font-size: 1.8rem; }
+    .evolution-item .evo-emoji { font-size: 1.6rem; }
+    .evolution-item .evo-name { font-size: 0.9rem; }
+    
+    /* ✅ NOVO: Tooltip menor no mobile */
+    .powerup-tooltip {
+      width: 180px;
       padding: 10px;
     }
-
-    h1 {
-      font-size: 1.6rem;
-    }
-
-    .subtitle {
-      font-size: 0.7rem;
-    }
-
-    .board {
-      gap: 5px;
-      padding: 8px;
-    }
-
-    /* ✅ Emojis grandes no mobile também */
-    .emoji {
-      font-size: clamp(1.8rem, 10vw, 2.5rem);
-    }
-
-    .action-btn {
-      padding: 5px 10px;
-      font-size: 0.7rem;
-    }
-
-    .stat-value {
-      font-size: 1rem;
-    }
-
-    .stat-label {
-      font-size: 0.6rem;
-    }
-
-    .btn-spawn {
-      padding: 12px;
-      font-size: 0.9rem;
-    }
-
-    .floating-btn {
-      width: 42px;
-      height: 42px;
-      font-size: 18px;
-    }
-
-    .table-modal-content {
-      padding: 20px 15px;
-    }
-
-    .table-modal-content h2 {
-      font-size: 1.6rem;
-    }
-
-    .evolution-item .evo-emoji {
-      font-size: 1.6rem;
-    }
-
-    .evolution-item .evo-name {
-      font-size: 0.9rem;
-    }
+    .tooltip-title { font-size: 1.1rem; }
+    .tooltip-desc { font-size: 0.75rem; }
+    .tooltip-tip { font-size: 0.7rem; }
   }
 
-  .table-modal-content::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .table-modal-content::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-  }
-
-  .table-modal-content::-webkit-scrollbar-thumb {
-    background: #ffd700;
-    border-radius: 3px;
-  }
+  .modal-content::-webkit-scrollbar, .victory-card::-webkit-scrollbar { width: 6px; }
+  .modal-content::-webkit-scrollbar-track, .victory-card::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 3px; }
+  .modal-content::-webkit-scrollbar-thumb, .victory-card::-webkit-scrollbar-thumb { background: #ffd700; border-radius: 3px; }
 </style>
 </head>
 <body>
 
-<button class="floating-btn" id="tableBtn" title="Tabela de Evolução"></button>
-<button class="floating-btn" id="soundBtn" title="Som"></button>
+<button class="floating-btn" id="tableBtn" title="Tabela de Evolução">📖</button>
+<button class="floating-btn" id="achievementsBtn" title="Conquistas">🏆</button>
+<button class="floating-btn" id="soundBtn" title="Som">🔊</button>
 
 <div class="game-container">
   <header>
-    <h1> Merge Cosmos</h1>
+    <h1>🌌 JuntaTudo</h1>
     <div class="subtitle">combine figuras iguais para evoluir</div>
   </header>
 
   <div class="top-actions">
-    <button class="action-btn reset" id="resetBtn">🔄 Reiniciar</button>
+    <button class="action-btn save" id="saveBtn">💾 Salvar</button>
+    <button class="action-btn reset" id="resetBtn">🔄 Novo Jogo</button>
     <button class="action-btn home" id="homeBtn">🏠 Menu</button>
   </div>
+
+  <div class="mode-selector">
+    <button class="mode-btn active" id="normalMode">🎮 Normal</button>
+    <button class="mode-btn" id="challengeMode">⚔️ Desafio</button>
+  </div>
+
+  <div class="chain-selector" id="chainSelector"></div>
 
   <div class="stats-bar">
     <div class="stat">
@@ -639,6 +598,49 @@
       <div class="stat-label">Máximo</div>
       <div class="stat-value" id="maxLevel">1</div>
     </div>
+    <div class="stat">
+      <div class="stat-label">Tempo</div>
+      <div class="stat-value" id="timer">--</div>
+    </div>
+  </div>
+
+  <!-- ✅ NOVO: Power-ups com tooltips -->
+  <div class="powerups-bar">
+    <div class="powerup-wrapper">
+      <button class="powerup-btn" id="bombBtn" title="Bomba">
+        <span class="icon">💣</span>
+        <span class="count" id="bombCount">x3</span>
+      </button>
+      <div class="powerup-tooltip">
+        <div class="tooltip-title">💣 Bomba</div>
+        <div class="tooltip-desc">Elimina a peça selecionada, liberando espaço no tabuleiro.</div>
+        <div class="tooltip-tip">Use quando o tabuleiro estiver cheio e sem jogadas possíveis!</div>
+      </div>
+    </div>
+
+    <div class="powerup-wrapper">
+      <button class="powerup-btn" id="shuffleBtn" title="Embaralhar">
+        <span class="icon">🔀</span>
+        <span class="count" id="shuffleCount">x2</span>
+      </button>
+      <div class="powerup-tooltip">
+        <div class="tooltip-title">🔀 Embaralhar</div>
+        <div class="tooltip-desc">Redistribui todas as peças aleatoriamente pelo tabuleiro.</div>
+        <div class="tooltip-tip">Perfeito quando pares iguais estão em cantos opostos!</div>
+      </div>
+    </div>
+
+    <div class="powerup-wrapper">
+      <button class="powerup-btn" id="timeBtn" title="Tempo Extra">
+        <span class="icon">⏱️</span>
+        <span class="count" id="timeCount">x2</span>
+      </button>
+      <div class="powerup-tooltip">
+        <div class="tooltip-title">⏱️ Tempo Extra</div>
+        <div class="tooltip-desc">Adiciona 30 segundos ao cronômetro (apenas no Modo Desafio).</div>
+        <div class="tooltip-tip">Guarde para quando o tempo estiver acabando e você estiver perto de vencer!</div>
+      </div>
+    </div>
   </div>
 
   <div class="board" id="board"></div>
@@ -650,20 +652,45 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="save-indicator" id="saveIndicator">💾 Jogo salvo!</div>
+
 <div class="table-modal" id="tableModal">
-  <div class="table-modal-content">
+  <div class="modal-content">
     <button class="close-modal" id="closeTable">&times;</button>
     <h2>📖 Tabela de Evolução</h2>
     <div class="evolution-list" id="evolutionList"></div>
   </div>
 </div>
 
+<div class="achievements-modal" id="achievementsModal">
+  <div class="modal-content">
+    <button class="close-modal" id="closeAchievements">&times;</button>
+    <h2>🏆 Conquistas</h2>
+    <div class="achievement-list" id="achievementList"></div>
+  </div>
+</div>
+
+<div class="save-modal" id="saveModal">
+  <div class="modal-content">
+    <h2>💾 Jogo Salvo Detectado</h2>
+    <div class="stats">
+      <div>📊 Cadeia: <strong id="savedChain">-</strong></div>
+      <div>🎮 Modo: <strong id="savedMode">-</strong></div>
+      <div>⭐ Pontos: <strong id="savedScore">0</strong></div>
+      <div>🔬 Fusões: <strong id="savedFusions">0</strong></div>
+      <div>📈 Nível Máximo: <strong id="savedMaxLevel">1</strong></div>
+    </div>
+    <button onclick="loadSavedGame()">▶️ Continuar de onde parei</button>
+    <button onclick="startNewGame()">🆕 Iniciar novo jogo</button>
+  </div>
+</div>
+
 <div class="victory-overlay" id="victoryOverlay">
   <div class="victory-card">
-    <div class="trophy"></div>
+    <div class="trophy">🏆</div>
     <h2>Parabéns!</h2>
     <div class="stats">
-      <div>🎯 Você alcançou o <strong>Buraco Negro</strong>!</div>
+      <div>🎯 Você alcançou o nível máximo!</div>
       <div>⭐ Pontuação: <strong id="finalScore">0</strong></div>
       <div>🔬 Fusões: <strong id="finalFusions">0</strong></div>
     </div>
@@ -673,230 +700,667 @@
 </div>
 
 <script>
-  const EVOLUTION_CHAIN = [
-    { level: 1,  emoji: '\u{1F95A}', name: 'Ovo' },
-    { level: 2,  emoji: '\u{1F425}', name: 'Pinto' },
-    { level: 3,  emoji: '\u{1F414}', name: 'Galinha' },
-    { level: 4,  emoji: '\u{1F331}', name: 'Broto' },
-    { level: 5,  emoji: '\u{1F333}', name: 'Árvore' },
-    { level: 6,  emoji: '\u{1F34E}', name: 'Maçã' },
-    { level: 7,  emoji: '\u{1F4A7}', name: 'Gota' },
-    { level: 8,  emoji: '\u{1F30A}', name: 'Onda' },
-    { level: 9,  emoji: '\u{26A1}', name: 'Raio' },
-    { level: 10, emoji: '\u{1F525}', name: 'Fogo' },
-    { level: 11, emoji: '\u{1F30B}', name: 'Vulcão' },
-    { level: 12, emoji: '\u{1F30D}', name: 'Terra' },
-    { level: 13, emoji: '\u{2600}\u{FE0F}', name: 'Sol' },
-    { level: 14, emoji: '\u{1F30C}', name: 'Galáxia' },
-    { level: 15, emoji: '\u{1F573}\u{FE0F}', name: 'Buraco Negro' }
-  ];
-
-  // ✅ CORREÇÃO: Tabuleiro 5x5 (era 6x6)
-  const BOARD_SIZE = 5;
-  const MAX_LEVEL = 15;
-
-  let audioCtx = null;
-  let muted = false;
-  let audioInitialized = false;
-  let musicPlaying = false;
-  let musicNodes = [];
-  let musicTimeouts = [];
-
-  function initAudio() {
-    if (audioInitialized) return;
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      audioInitialized = true;
-    } catch(e) {}
+const CHAINS = {
+  cosmic: {
+    name: '🌌 Cósmica',
+    emoji: '🌌',
+    evolution: [
+      { level: 1,  emoji: '\u{1F95A}', name: 'Ovo' },
+      { level: 2,  emoji: '\u{1F425}', name: 'Pinto' },
+      { level: 3,  emoji: '\u{1F414}', name: 'Galinha' },
+      { level: 4,  emoji: '\u{1F331}', name: 'Broto' },
+      { level: 5,  emoji: '\u{1F333}', name: 'Árvore' },
+      { level: 6,  emoji: '\u{1F34E}', name: 'Maçã' },
+      { level: 7,  emoji: '\u{1F4A7}', name: 'Gota' },
+      { level: 8,  emoji: '\u{1F30A}', name: 'Onda' },
+      { level: 9,  emoji: '\u{26A1}', name: 'Raio' },
+      { level: 10, emoji: '\u{1F525}', name: 'Fogo' },
+      { level: 11, emoji: '\u{1F30B}', name: 'Vulcão' },
+      { level: 12, emoji: '\u{1F30D}', name: 'Terra' },
+      { level: 13, emoji: '\u{2600}\u{FE0F}', name: 'Sol' },
+      { level: 14, emoji: '\u{1F30C}', name: 'Galáxia' },
+      { level: 15, emoji: '\u{1F573}\u{FE0F}', name: 'Buraco Negro' }
+    ]
+  },
+  animals: {
+    name: '🦁 Animais',
+    emoji: '🦁',
+    evolution: [
+      { level: 1,  emoji: '\u{1F41B}', name: 'Lagarta' },
+      { level: 2,  emoji: '\u{1F98B}', name: 'Borboleta' },
+      { level: 3,  emoji: '\u{1F41D}', name: 'Abelha' },
+      { level: 4,  emoji: '\u{1F41C}', name: 'Formiga' },
+      { level: 5,  emoji: '\u{1F41E}', name: 'Joaninha' },
+      { level: 6,  emoji: '\u{1F40C}', name: 'Caracol' },
+      { level: 7,  emoji: '\u{1F40D}', name: 'Cobra' },
+      { level: 8,  emoji: '\u{1F438}', name: 'Sapo' },
+      { level: 9,  emoji: '\u{1F422}', name: 'Tartaruga' },
+      { level: 10, emoji: '\u{1F98E}', name: 'Crocodilo' },
+      { level: 11, emoji: '\u{1F981}', name: 'Leão' },
+      { level: 12, emoji: '\u{1F418}', name: 'Elefante' },
+      { level: 13, emoji: '\u{1F98F}', name: 'Rinoceronte' },
+      { level: 14, emoji: '\u{1F409}', name: 'Dragão' },
+      { level: 15, emoji: '\u{1F984}', name: 'Unicórnio' }
+    ]
+  },
+  technology: {
+    name: '💻 Tecnologia',
+    emoji: '',
+    evolution: [
+      { level: 1,  emoji: '\u{1FAA8}', name: 'Pedra' },
+      { level: 2,  emoji: '\u{1F528}', name: 'Martelo' },
+      { level: 3,  emoji: '\u{2699}\u{FE0F}', name: 'Engrenagem' },
+      { level: 4,  emoji: '\u{1F4A1}', name: 'Lâmpada' },
+      { level: 5,  emoji: '\u{1F50B}', name: 'Bateria' },
+      { level: 6,  emoji: '\u{1F4F1}', name: 'Celular' },
+      { level: 7,  emoji: '\u{1F4BB}', name: 'Laptop' },
+      { level: 8,  emoji: '\u{1F5A5}\u{FE0F}', name: 'Computador' },
+      { level: 9,  emoji: '\u{1F916}', name: 'Robô' },
+      { level: 10, emoji: '\u{1F680}', name: 'Foguete' },
+      { level: 11, emoji: '\u{1F6F8}', name: 'OVNI' },
+      { level: 12, emoji: '\u{1F30D}', name: 'Planeta' },
+      { level: 13, emoji: '\u{1F30C}', name: 'Galáxia' },
+      { level: 14, emoji: '\u{1F573}\u{FE0F}', name: 'Buraco Negro' },
+      { level: 15, emoji: '\u{269B}\u{FE0F}', name: 'Singularidade' }
+    ]
+  },
+  magic: {
+    name: '🔮 Magia',
+    emoji: '🔮',
+    evolution: [
+      { level: 1,  emoji: '\u{1F4DC}', name: 'Pergaminho' },
+      { level: 2,  emoji: '\u{1F58B}\u{FE0F}', name: 'Pena' },
+      { level: 3,  emoji: '\u{1F4D6}', name: 'Livro' },
+      { level: 4,  emoji: '\u{1F9EA}', name: 'Poção' },
+      { level: 5,  emoji: '\u{1F52E}', name: 'Bola de Cristal' },
+      { level: 6,  emoji: '\u{2697}\u{FE0F}', name: 'Cálice' },
+      { level: 7,  emoji: '\u{1F451}', name: 'Coroa' },
+      { level: 8,  emoji: '\u{1F531}', name: 'Tridente' },
+      { level: 9,  emoji: '\u{2694}\u{FE0F}', name: 'Espada' },
+      { level: 10, emoji: '\u{1F6E1}\u{FE0F}', name: 'Escudo' },
+      { level: 11, emoji: '\u{1F9D9}', name: 'Mago' },
+      { level: 12, emoji: '\u{1F9DD}', name: 'Elfo' },
+      { level: 13, emoji: '\u{1F9DB}', name: 'Vampiro' },
+      { level: 14, emoji: '\u{1F9CC}', name: 'Fada' },
+      { level: 15, emoji: '\u{1F451}', name: 'Rei Mago' }
+    ]
   }
+};
 
-  function playTone(freq, duration, type = 'sine', volume = 0.15, attack = 0.01) {
-    if (muted || !audioCtx) return;
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.value = freq;
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    
-    const now = audioCtx.currentTime;
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(volume, now + attack);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-    
-    osc.start(now);
-    osc.stop(now + duration);
-    
-    setTimeout(() => {
-      try { osc.disconnect(); gain.disconnect(); } catch(e) {}
-    }, duration * 1000 + 100);
+const BOARD_SIZE = 5;
+const MAX_LEVEL = 15;
+const SAVE_KEY = 'juntatudo_savegame';
+const STATS_KEY = 'juntatudo_stats';
+
+const ACHIEVEMENTS = [
+  { id: 'first_fusion', name: 'Primeira Fusão', desc: 'Faça sua primeira combinação', icon: '🎯', check: (stats) => stats.fusions >= 1 },
+  { id: 'fusion_master', name: 'Mestre das Fusões', desc: 'Faça 50 fusões', icon: '🔬', check: (stats) => stats.fusions >= 50 },
+  { id: 'level_5', name: 'Evolução Inicial', desc: 'Alcance o nível 5', icon: '⭐', check: (stats) => stats.maxLevel >= 5 },
+  { id: 'level_10', name: 'Evolução Avançada', desc: 'Alcance o nível 10', icon: '🌟', check: (stats) => stats.maxLevel >= 10 },
+  { id: 'level_15', name: 'Evolução Máxima', desc: 'Alcance o nível 15', icon: '👑', check: (stats) => stats.maxLevel >= 15 },
+  { id: 'score_1000', name: 'Mil Pontos', desc: 'Alcance 1000 pontos', icon: '💰', check: (stats) => stats.score >= 1000 },
+  { id: 'score_5000', name: 'Cinco Mil', desc: 'Alcance 5000 pontos', icon: '🏅', check: (stats) => stats.score >= 5000 },
+  { id: 'bomb_used', name: 'Demolidor', desc: 'Use uma bomba', icon: '💣', check: (stats) => stats.bombsUsed >= 1 },
+  { id: 'shuffle_used', name: 'Organizador', desc: 'Use o shuffle', icon: '🔀', check: (stats) => stats.shufflesUsed >= 1 },
+  { id: 'challenge_win', name: 'Desafiante', desc: 'Vença no modo desafio', icon: '⚔️', check: (stats) => stats.challengeWins >= 1 },
+  { id: 'all_chains', name: 'Explorador', desc: 'Jogue todas as cadeias', icon: '🗺️', check: (stats) => stats.chainsPlayed && stats.chainsPlayed.length >= 4 },
+  { id: 'speed_demon', name: 'Velocista', desc: 'Vença com mais de 60s restantes', icon: '⚡', check: (stats) => stats.fastWins >= 1 }
+];
+
+let currentChain = 'cosmic';
+let gameMode = 'normal';
+let board = [];
+let blockedCells = [];
+let selectedCell = null;
+let score = 0;
+let fusions = 0;
+let maxLevelReached = 1;
+let gameOver = false;
+let nextPieceId = 1;
+const animatedPieces = new Set();
+let timeLeft = 0;
+let timerInterval = null;
+
+let powerups = { bomb: 3, shuffle: 2, time: 2 };
+
+let stats = {
+  fusions: 0,
+  maxLevel: 1,
+  score: 0,
+  bombsUsed: 0,
+  shufflesUsed: 0,
+  challengeWins: 0,
+  chainsPlayed: [],
+  fastWins: 0,
+  achievements: []
+};
+
+function saveGame() {
+  const saveData = {
+    board: board,
+    blockedCells: blockedCells,
+    selectedCell: selectedCell,
+    score: score,
+    fusions: fusions,
+    maxLevelReached: maxLevelReached,
+    gameOver: gameOver,
+    nextPieceId: nextPieceId,
+    currentChain: currentChain,
+    gameMode: gameMode,
+    timeLeft: timeLeft,
+    powerups: powerups,
+    timestamp: Date.now()
+  };
+
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    showSaveIndicator();
+  } catch(e) {
+    console.error('Erro ao salvar:', e);
   }
+}
 
-  function startMusic() {
-    if (muted || !audioCtx || musicPlaying) return;
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    
-    musicPlaying = true;
-    const scale = [261.63, 329.63, 392.00, 523.25, 659.25];
-    const masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.03;
-    masterGain.connect(audioCtx.destination);
-    musicNodes.push(masterGain);
-    
-    function playNote() {
-      if (!musicPlaying || muted) return;
-      const freq = scale[Math.floor(Math.random() * scale.length)];
-      const osc = audioCtx.createOscillator();
-      const noteGain = audioCtx.createGain();
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 900;
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      osc.connect(filter);
-      filter.connect(noteGain);
-      noteGain.connect(masterGain);
+function loadSavedGame() {
+  try {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+      const saveData = JSON.parse(saved);
       
-      const now = audioCtx.currentTime;
-      noteGain.gain.setValueAtTime(0, now);
-      noteGain.gain.linearRampToValueAtTime(0.4, now + 0.3);
-      noteGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
-      osc.start(now);
-      osc.stop(now + 2.5);
+      board = saveData.board || [];
+      blockedCells = saveData.blockedCells || [];
+      selectedCell = saveData.selectedCell || null;
+      score = saveData.score || 0;
+      fusions = saveData.fusions || 0;
+      maxLevelReached = saveData.maxLevelReached || 1;
+      gameOver = saveData.gameOver || false;
+      nextPieceId = saveData.nextPieceId || 1;
+      currentChain = saveData.currentChain || 'cosmic';
+      gameMode = saveData.gameMode || 'normal';
+      timeLeft = saveData.timeLeft || 0;
+      powerups = saveData.powerups || { bomb: 3, shuffle: 2, time: 2 };
+
+      document.getElementById('normalMode').classList.toggle('active', gameMode === 'normal');
+      document.getElementById('challengeMode').classList.toggle('active', gameMode === 'challenge');
       
-      setTimeout(() => {
-        try { osc.disconnect(); filter.disconnect(); noteGain.disconnect(); } catch(e) {}
-      }, 2600);
+      renderChainSelector();
+      renderBoard();
+      updatePowerupButtons();
       
-      const t = setTimeout(playNote, 1200 + Math.random() * 1500);
-      musicTimeouts.push(t);
-    }
-    
-    playNote();
-    musicTimeouts.push(setTimeout(playNote, 600));
-  }
-
-  function stopMusic() {
-    musicPlaying = false;
-    musicTimeouts.forEach(clearTimeout);
-    musicTimeouts = [];
-    musicNodes.forEach(n => { try { n.disconnect(); } catch(e) {} });
-    musicNodes = [];
-  }
-
-  function soundSelect() { playTone(700, 0.08, 'sine', 0.15); }
-  function soundFuse() { 
-    playTone(523, 0.12, 'sine', 0.2); 
-    setTimeout(() => playTone(784, 0.15, 'sine', 0.2), 80); 
-  }
-  function soundEvolve() { 
-    [523, 659, 784, 1047].forEach((n, i) => 
-      setTimeout(() => playTone(n, 0.2, 'triangle', 0.25), i * 80)
-    ); 
-  }
-  function soundWin() { 
-    [523, 659, 784, 1047, 1318, 1568].forEach((n, i) => 
-      setTimeout(() => playTone(n, 0.3, 'sine', 0.3), i * 100)
-    ); 
-  }
-  function soundError() { playTone(220, 0.2, 'sawtooth', 0.1); }
-  function soundClick() { playTone(800, 0.06, 'square', 0.1); }
-
-  const soundBtn = document.getElementById('soundBtn');
-  soundBtn.addEventListener('click', () => {
-    muted = !muted;
-    soundBtn.textContent = muted ? '' : '🔊';
-    if (muted) stopMusic(); else startMusic();
-  });
-
-  const tableBtn = document.getElementById('tableBtn');
-  const tableModal = document.getElementById('tableModal');
-  const closeTable = document.getElementById('closeTable');
-  const evolutionList = document.getElementById('evolutionList');
-
-  function renderEvolutionTable() {
-    evolutionList.innerHTML = '';
-    EVOLUTION_CHAIN.forEach((ev, index) => {
-      const item = document.createElement('div');
-      item.className = 'evolution-item';
-      item.innerHTML = `
-        <span class="evo-emoji">${ev.emoji}</span>
-        <div class="evo-info">
-          <div class="evo-name">${ev.name}</div>
-          <div class="evo-level">Nível ${ev.level}</div>
-        </div>
-      `;
-      evolutionList.appendChild(item);
-
-      if (index < EVOLUTION_CHAIN.length - 1) {
-        const arrow = document.createElement('div');
-        arrow.className = 'evolution-arrow';
-        arrow.textContent = '⬇️';
-        evolutionList.appendChild(arrow);
+      if (gameMode === 'challenge') {
+        startTimer();
+      } else {
+        document.getElementById('timer').textContent = '--';
       }
-    });
-  }
 
-  tableBtn.addEventListener('click', () => {
-    soundClick();
-    tableModal.classList.add('show');
-  });
-
-  closeTable.addEventListener('click', () => {
-    soundClick();
-    tableModal.classList.remove('show');
-  });
-
-  tableModal.addEventListener('click', (e) => {
-    if (e.target === tableModal) {
-      tableModal.classList.remove('show');
+      saveModal.classList.remove('show');
+      showToast('✅ Jogo carregado com sucesso!');
     }
+  } catch(e) {
+    console.error('Erro ao carregar:', e);
+    showToast('❌ Erro ao carregar jogo salvo');
+  }
+}
+
+function hasSavedGame() {
+  return localStorage.getItem(SAVE_KEY) !== null;
+}
+
+function clearSavedGame() {
+  localStorage.removeItem(SAVE_KEY);
+}
+
+function showSaveIndicator() {
+  const indicator = document.getElementById('saveIndicator');
+  indicator.classList.add('show');
+  setTimeout(() => indicator.classList.remove('show'), 2000);
+}
+
+function showSavedGameModal() {
+  try {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+      const saveData = JSON.parse(saved);
+      document.getElementById('savedChain').textContent = CHAINS[saveData.currentChain]?.name || '-';
+      document.getElementById('savedMode').textContent = saveData.gameMode === 'challenge' ? 'Desafio' : 'Normal';
+      document.getElementById('savedScore').textContent = saveData.score || 0;
+      document.getElementById('savedFusions').textContent = saveData.fusions || 0;
+      document.getElementById('savedMaxLevel').textContent = saveData.maxLevelReached || 1;
+      saveModal.classList.add('show');
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+const saveBtn = document.getElementById('saveBtn');
+const saveModal = document.getElementById('saveModal');
+
+saveBtn.addEventListener('click', () => {
+  soundClick();
+  saveGame();
+  showToast('💾 Jogo salvo manualmente!');
+});
+
+function startNewGame() {
+  clearSavedGame();
+  saveModal.classList.remove('show');
+  startLevel();
+  showToast('🆕 Novo jogo iniciado!');
+}
+
+function loadStats() {
+  try {
+    const saved = localStorage.getItem(STATS_KEY);
+    if (saved) stats = JSON.parse(saved);
+  } catch(e) {}
+}
+
+function saveStats() {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch(e) {}
+}
+
+let audioCtx = null;
+let muted = false;
+let audioInitialized = false;
+let musicPlaying = false;
+let musicNodes = [];
+let musicTimeouts = [];
+
+function initAudio() {
+  if (audioInitialized) return;
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); audioInitialized = true; } catch(e) {}
+}
+
+function playTone(freq, duration, type = 'sine', volume = 0.15, attack = 0.01) {
+  if (muted || !audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type; osc.frequency.value = freq;
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  const now = audioCtx.currentTime;
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(volume, now + attack);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+  osc.start(now); osc.stop(now + duration);
+  setTimeout(() => { try { osc.disconnect(); gain.disconnect(); } catch(e) {} }, duration * 1000 + 100);
+}
+
+function startMusic() {
+  if (muted || !audioCtx || musicPlaying) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  musicPlaying = true;
+  const scale = [261.63, 329.63, 392.00, 523.25, 659.25];
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.03;
+  masterGain.connect(audioCtx.destination);
+  musicNodes.push(masterGain);
+  function playNote() {
+    if (!musicPlaying || muted) return;
+    const freq = scale[Math.floor(Math.random() * scale.length)];
+    const osc = audioCtx.createOscillator();
+    const noteGain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass'; filter.frequency.value = 900;
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    osc.connect(filter); filter.connect(noteGain); noteGain.connect(masterGain);
+    const now = audioCtx.currentTime;
+    noteGain.gain.setValueAtTime(0, now);
+    noteGain.gain.linearRampToValueAtTime(0.4, now + 0.3);
+    noteGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+    osc.start(now); osc.stop(now + 2.5);
+    setTimeout(() => { try { osc.disconnect(); filter.disconnect(); noteGain.disconnect(); } catch(e) {} }, 2600);
+    const t = setTimeout(playNote, 1200 + Math.random() * 1500);
+    musicTimeouts.push(t);
+  }
+  playNote();
+  musicTimeouts.push(setTimeout(playNote, 600));
+}
+
+function stopMusic() {
+  musicPlaying = false;
+  musicTimeouts.forEach(clearTimeout);
+  musicTimeouts = [];
+  musicNodes.forEach(n => { try { n.disconnect(); } catch(e) {} });
+  musicNodes = [];
+}
+
+function soundSelect() { playTone(700, 0.08, 'sine', 0.15); }
+function soundFuse() { playTone(523, 0.12, 'sine', 0.2); setTimeout(() => playTone(784, 0.15, 'sine', 0.2), 80); }
+function soundEvolve() { [523, 659, 784, 1047].forEach((n, i) => setTimeout(() => playTone(n, 0.2, 'triangle', 0.25), i * 80)); }
+function soundWin() { [523, 659, 784, 1047, 1318, 1568].forEach((n, i) => setTimeout(() => playTone(n, 0.3, 'sine', 0.3), i * 100)); }
+function soundError() { playTone(220, 0.2, 'sawtooth', 0.1); }
+function soundClick() { playTone(800, 0.06, 'square', 0.1); }
+function soundPowerup() { [440, 554, 659].forEach((n, i) => setTimeout(() => playTone(n, 0.15, 'sine', 0.2), i * 60)); }
+
+const soundBtn = document.getElementById('soundBtn');
+soundBtn.addEventListener('click', () => {
+  muted = !muted;
+  soundBtn.textContent = muted ? '🔇' : '🔊';
+  if (muted) stopMusic(); else startMusic();
+});
+
+// ✅ NOVO: Tooltips para mobile (touch)
+document.querySelectorAll('.powerup-wrapper').forEach(wrapper => {
+  let touchTimeout;
+  
+  wrapper.addEventListener('touchstart', (e) => {
+    touchTimeout = setTimeout(() => {
+      wrapper.classList.add('show-tooltip');
+    }, 500);
   });
+  
+  wrapper.addEventListener('touchend', () => {
+    clearTimeout(touchTimeout);
+    setTimeout(() => {
+      wrapper.classList.remove('show-tooltip');
+    }, 2000);
+  });
+  
+  wrapper.addEventListener('touchmove', () => {
+    clearTimeout(touchTimeout);
+    wrapper.classList.remove('show-tooltip');
+  });
+});
 
-  let board = [];
-  let selectedCell = null;
-  let score = 0;
-  let fusions = 0;
-  let maxLevelReached = 1;
-  let gameOver = false;
-  let nextPieceId = 1;
-  const animatedPieces = new Set();
+function renderChainSelector() {
+  const selector = document.getElementById('chainSelector');
+  selector.innerHTML = '';
+  Object.keys(CHAINS).forEach(key => {
+    const chain = CHAINS[key];
+    const btn = document.createElement('button');
+    btn.className = 'chain-btn' + (key === currentChain ? ' active' : '');
+    btn.innerHTML = `${chain.emoji}<br>${chain.name.split(' ')[1]}`;
+    btn.addEventListener('click', () => {
+      soundClick();
+      currentChain = key;
+      if (!stats.chainsPlayed.includes(key)) {
+        stats.chainsPlayed.push(key);
+        saveStats();
+      }
+      renderChainSelector();
+      startLevel();
+    });
+    selector.appendChild(btn);
+  });
+}
 
-  function initBoard() {
-    board = [];
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      board[r] = [];
-      for (let c = 0; c < BOARD_SIZE; c++) {
+document.getElementById('normalMode').addEventListener('click', () => {
+  soundClick();
+  gameMode = 'normal';
+  document.getElementById('normalMode').classList.add('active');
+  document.getElementById('challengeMode').classList.remove('active');
+  startLevel();
+});
+
+document.getElementById('challengeMode').addEventListener('click', () => {
+  soundClick();
+  gameMode = 'challenge';
+  document.getElementById('challengeMode').classList.add('active');
+  document.getElementById('normalMode').classList.remove('active');
+  startLevel();
+});
+
+function updatePowerupButtons() {
+  document.getElementById('bombCount').textContent = `x${powerups.bomb}`;
+  document.getElementById('shuffleCount').textContent = `x${powerups.shuffle}`;
+  document.getElementById('timeCount').textContent = `x${powerups.time}`;
+  
+  document.getElementById('bombBtn').disabled = powerups.bomb === 0;
+  document.getElementById('shuffleBtn').disabled = powerups.shuffle === 0;
+  document.getElementById('timeBtn').disabled = powerups.time === 0 || gameMode !== 'challenge';
+}
+
+document.getElementById('bombBtn').addEventListener('click', () => {
+  if (powerups.bomb > 0 && selectedCell) {
+    soundPowerup();
+    powerups.bomb--;
+    stats.bombsUsed++;
+    saveStats();
+    checkAchievements();
+    
+    board[selectedCell.row][selectedCell.col] = null;
+    selectedCell = null;
+    renderBoard();
+    saveGame();
+    showToast('💣 Peça eliminada!');
+    updatePowerupButtons();
+  } else if (powerups.bomb === 0) {
+    showToast('Sem bombas!');
+  } else {
+    showToast('Selecione uma peça primeiro!');
+  }
+});
+
+document.getElementById('shuffleBtn').addEventListener('click', () => {
+  if (powerups.shuffle > 0) {
+    soundPowerup();
+    powerups.shuffle--;
+    stats.shufflesUsed++;
+    saveStats();
+    checkAchievements();
+    
+    shuffleBoard();
+    renderBoard();
+    saveGame();
+    showToast(' Tabuleiro embaralhado!');
+    updatePowerupButtons();
+  } else {
+    showToast('Sem shuffles!');
+  }
+});
+
+document.getElementById('timeBtn').addEventListener('click', () => {
+  if (powerups.time > 0 && gameMode === 'challenge') {
+    soundPowerup();
+    powerups.time--;
+    timeLeft += 30;
+    updateTimer();
+    saveGame();
+    showToast('⏱️ +30 segundos!');
+    updatePowerupButtons();
+  } else if (gameMode !== 'challenge') {
+    showToast('Só no modo desafio!');
+  } else {
+    showToast('Sem tempo extra!');
+  }
+});
+
+function shuffleBoard() {
+  const pieces = [];
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (board[r][c] && !blockedCells.some(b => b.row === r && b.col === c)) {
+        pieces.push(board[r][c]);
         board[r][c] = null;
       }
     }
   }
+  
+  for (let i = pieces.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pieces[i], pieces[j]] = [pieces[j], pieces[i]];
+  }
+  
+  let idx = 0;
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (!board[r][c] && !blockedCells.some(b => b.row === r && b.col === c) && idx < pieces.length) {
+        board[r][c] = pieces[idx++];
+      }
+    }
+  }
+}
 
-  function renderBoard() {
-    const boardEl = document.getElementById('board');
-    boardEl.innerHTML = '';
+function startTimer() {
+  if (gameMode === 'challenge') {
+    if (timeLeft <= 0) timeLeft = 120;
+    updateTimer();
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      updateTimer();
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        gameOver = true;
+        showToast('⏱️ Tempo esgotado!');
+        saveGame();
+        setTimeout(() => showVictory(), 1000);
+      }
+    }, 1000);
+  } else {
+    clearInterval(timerInterval);
+    document.getElementById('timer').textContent = '--';
+  }
+}
 
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.dataset.row = r;
-        cell.dataset.col = c;
+function updateTimer() {
+  const mins = Math.floor(timeLeft / 60);
+  const secs = timeLeft % 60;
+  document.getElementById('timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
+function generateObstacles() {
+  blockedCells = [];
+  const numObstacles = 3 + Math.floor(Math.random() * 3);
+  
+  for (let i = 0; i < numObstacles; i++) {
+    let row, col;
+    do {
+      row = Math.floor(Math.random() * BOARD_SIZE);
+      col = Math.floor(Math.random() * BOARD_SIZE);
+    } while (blockedCells.some(b => b.row === row && b.col === col));
+    
+    blockedCells.push({ row, col });
+  }
+}
+
+function checkAchievements() {
+  ACHIEVEMENTS.forEach(ach => {
+    if (!stats.achievements.includes(ach.id) && ach.check(stats)) {
+      stats.achievements.push(ach.id);
+      saveStats();
+      showToast(`🏆 Conquista: ${ach.name}!`);
+    }
+  });
+}
+
+function renderAchievements() {
+  const list = document.getElementById('achievementList');
+  list.innerHTML = '';
+  
+  ACHIEVEMENTS.forEach(ach => {
+    const unlocked = stats.achievements.includes(ach.id);
+    const item = document.createElement('div');
+    item.className = 'achievement-item' + (unlocked ? ' unlocked' : '');
+    item.innerHTML = `
+      <span class="ach-icon">${ach.icon}</span>
+      <div class="ach-info">
+        <div class="ach-name">${ach.name}</div>
+        <div class="ach-desc">${ach.desc}</div>
+      </div>
+      <span class="ach-status">${unlocked ? '✅' : ''}</span>
+    `;
+    list.appendChild(item);
+  });
+}
+
+const achievementsBtn = document.getElementById('achievementsBtn');
+const achievementsModal = document.getElementById('achievementsModal');
+const closeAchievements = document.getElementById('closeAchievements');
+
+achievementsBtn.addEventListener('click', () => {
+  soundClick();
+  renderAchievements();
+  achievementsModal.classList.add('show');
+});
+
+closeAchievements.addEventListener('click', () => {
+  soundClick();
+  achievementsModal.classList.remove('show');
+});
+
+achievementsModal.addEventListener('click', (e) => {
+  if (e.target === achievementsModal) achievementsModal.classList.remove('show');
+});
+
+const tableBtn = document.getElementById('tableBtn');
+const tableModal = document.getElementById('tableModal');
+const closeTable = document.getElementById('closeTable');
+const evolutionList = document.getElementById('evolutionList');
+
+function renderEvolutionTable() {
+  evolutionList.innerHTML = '';
+  const chain = CHAINS[currentChain].evolution;
+  chain.forEach((ev, index) => {
+    const item = document.createElement('div');
+    item.className = 'evolution-item';
+    item.innerHTML = `
+      <span class="evo-emoji">${ev.emoji}</span>
+      <div class="evo-info">
+        <div class="evo-name">${ev.name}</div>
+        <div class="evo-level">Nível ${ev.level}</div>
+      </div>
+    `;
+    evolutionList.appendChild(item);
+    if (index < chain.length - 1) {
+      const arrow = document.createElement('div');
+      arrow.className = 'evolution-arrow';
+      arrow.textContent = '⬇️';
+      evolutionList.appendChild(arrow);
+    }
+  });
+}
+
+tableBtn.addEventListener('click', () => {
+  soundClick();
+  renderEvolutionTable();
+  tableModal.classList.add('show');
+});
+
+closeTable.addEventListener('click', () => {
+  soundClick();
+  tableModal.classList.remove('show');
+});
+
+tableModal.addEventListener('click', (e) => {
+  if (e.target === tableModal) tableModal.classList.remove('show');
+});
+
+function initBoard() {
+  board = [];
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    board[r] = [];
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      board[r][c] = null;
+    }
+  }
+}
+
+function renderBoard() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      if (blockedCells.some(b => b.row === r && b.col === c)) {
+        cell.classList.add('blocked');
+      } else {
         const piece = board[r][c];
         if (piece) {
-          const evolution = EVOLUTION_CHAIN[piece.level - 1];
+          const evolution = CHAINS[currentChain].evolution[piece.level - 1];
           const pieceEl = document.createElement('div');
           pieceEl.className = 'piece';
           
           if (animatedPieces.has(piece.id)) {
-            if (piece.justEvolved) {
-              pieceEl.classList.add('evolved');
-            } else {
-              pieceEl.classList.add('new-piece');
-            }
+            if (piece.justEvolved) pieceEl.classList.add('evolved');
+            else pieceEl.classList.add('new-piece');
             setTimeout(() => {
               animatedPieces.delete(piece.id);
               piece.justEvolved = false;
@@ -914,218 +1378,234 @@
         }
 
         cell.addEventListener('click', () => handleCellClick(r, c));
-        boardEl.appendChild(cell);
       }
-    }
 
-    updateStats();
-    updateSpawnButton();
+      boardEl.appendChild(cell);
+    }
   }
 
-  function handleCellClick(row, col) {
-    if (gameOver) return;
+  updateStats();
+  updateSpawnButton();
+}
 
-    const piece = board[row][col];
-    if (!piece) return;
+function handleCellClick(row, col) {
+  if (gameOver) return;
+  if (blockedCells.some(b => b.row === row && b.col === col)) return;
 
-    if (!selectedCell) {
-      selectedCell = { row, col };
-      soundSelect();
-      renderBoard();
-      return;
-    }
+  const piece = board[row][col];
+  if (!piece) return;
 
-    if (selectedCell.row === row && selectedCell.col === col) {
-      selectedCell = null;
-      renderBoard();
-      return;
-    }
-
-    const selectedPiece = board[selectedCell.row][selectedCell.col];
-
-    if (selectedPiece.level === piece.level) {
-      mergePieces(selectedCell.row, selectedCell.col, row, col);
-      return;
-    }
-
+  if (!selectedCell) {
     selectedCell = { row, col };
     soundSelect();
     renderBoard();
+    return;
   }
 
-  function mergePieces(fromRow, fromCol, toRow, toCol) {
-    const piece = board[toRow][toCol];
-    const newLevel = piece.level + 1;
-
-    board[fromRow][fromCol] = null;
-
-    if (newLevel > MAX_LEVEL) {
-      board[toRow][toCol] = null;
-      soundEvolve();
-      showToast(' Nível máximo alcançado!');
-    } else {
-      board[toRow][toCol] = { 
-        level: newLevel, 
-        id: nextPieceId++,
-        justEvolved: true 
-      };
-      animatedPieces.add(board[toRow][toCol].id);
-
-      if (newLevel >= 13 && newLevel < MAX_LEVEL) {
-        soundEvolve();
-      } else {
-        soundFuse();
-      }
-
-      setTimeout(() => {
-        fillEmptyCell(fromRow, fromCol);
-      }, 300);
-    }
-
-    score += newLevel * 10;
-    fusions++;
-    if (newLevel > maxLevelReached && newLevel <= MAX_LEVEL) {
-      maxLevelReached = newLevel;
-    }
-
+  if (selectedCell.row === row && selectedCell.col === col) {
     selectedCell = null;
     renderBoard();
-
-    if (newLevel === MAX_LEVEL) {
-      gameOver = true;
-      setTimeout(() => showVictory(), 1000);
-    }
-
-    if (newLevel >= 13 && newLevel < MAX_LEVEL) {
-      const evolution = EVOLUTION_CHAIN[newLevel - 1];
-      if (evolution) {
-        setTimeout(() => {
-          showToast(`🎉 Evoluiu para ${evolution.emoji} ${evolution.name}!`);
-        }, 400);
-      }
-    }
+    return;
   }
 
-  function fillEmptyCell(row, col) {
-    if (board[row][col] === null && !gameOver) {
-      board[row][col] = { 
-        level: 1, 
-        id: nextPieceId++,
-        justEvolved: false 
-      };
-      animatedPieces.add(board[row][col].id);
-      renderBoard();
-    }
+  const selectedPiece = board[selectedCell.row][selectedCell.col];
+
+  if (selectedPiece.level === piece.level) {
+    mergePieces(selectedCell.row, selectedCell.col, row, col);
+    return;
   }
 
-  function spawnPieces() {
-    if (gameOver) return;
-
-    const emptyCells = [];
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        if (!board[r][c]) {
-          emptyCells.push({ row: r, col: c });
-        }
-      }
-    }
-
-    if (emptyCells.length === 0) {
-      showToast('⚠️ Tabuleiro cheio!');
-      return;
-    }
-
-    emptyCells.forEach(({ row, col }) => {
-      board[row][col] = { 
-        level: 1, 
-        id: nextPieceId++,
-        justEvolved: false 
-      };
-      animatedPieces.add(board[row][col].id);
-    });
-
-    selectedCell = null;
-    renderBoard();
-    showToast(`✨ ${emptyCells.length} peça(s) gerada(s)!`);
-  }
-
-  function updateSpawnButton() {
-    const spawnBtn = document.getElementById('spawnBtn');
-    const hasEmpty = board.some(row => row.some(cell => cell === null));
-    spawnBtn.disabled = !hasEmpty || gameOver;
-  }
-
-  function showVictory() {
-    soundWin();
-    document.getElementById('finalScore').textContent = score;
-    document.getElementById('finalFusions').textContent = fusions;
-    document.getElementById('victoryOverlay').classList.add('show');
-  }
-
-  function closeVictory() {
-    document.getElementById('victoryOverlay').classList.remove('show');
-    resetGame(false);
-  }
-
-  function goHome() {
-    window.location.href = '../index.html';
-  }
-
-  function updateStats() {
-    document.getElementById('score').textContent = score;
-    document.getElementById('fusions').textContent = fusions;
-    document.getElementById('maxLevel').textContent = maxLevelReached;
-  }
-
-  function showToast(message) {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.classList.add('show');
-    setTimeout(() => {
-      toast.classList.remove('show');
-    }, 2500);
-  }
-
-  function resetGame(confirmReset = true) {
-    if (confirmReset) {
-      if (!confirm('Reiniciar o jogo? Todo progresso será perdido.')) {
-        return;
-      }
-    }
-    
-    initBoard();
-    selectedCell = null;
-    score = 0;
-    fusions = 0;
-    maxLevelReached = 1;
-    gameOver = false;
-    nextPieceId = 1;
-    animatedPieces.clear();
-    renderBoard();
-    showToast('🔄 Jogo reiniciado!');
-  }
-
-  function handleFirstInteraction() {
-    initAudio();
-    if (!muted) startMusic();
-    document.removeEventListener('click', handleFirstInteraction);
-    document.removeEventListener('touchstart', handleFirstInteraction);
-  }
-
-  document.getElementById('spawnBtn').addEventListener('click', spawnPieces);
-  document.getElementById('resetBtn').addEventListener('click', () => resetGame(true));
-  document.getElementById('homeBtn').addEventListener('click', goHome);
-
-  document.addEventListener('click', handleFirstInteraction);
-  document.addEventListener('touchstart', handleFirstInteraction);
-
-  initBoard();
-  renderEvolutionTable();
+  selectedCell = { row, col };
+  soundSelect();
   renderBoard();
+}
 
-  setTimeout(() => {
-    spawnPieces();
-  }, 300);
+function mergePieces(fromRow, fromCol, toRow, toCol) {
+  const piece = board[toRow][toCol];
+  const newLevel = piece.level + 1;
+
+  board[fromRow][fromCol] = null;
+
+  if (newLevel > MAX_LEVEL) {
+    board[toRow][toCol] = null;
+    soundEvolve();
+    showToast('🏆 Nível máximo alcançado!');
+  } else {
+    board[toRow][toCol] = { level: newLevel, id: nextPieceId++, justEvolved: true };
+    animatedPieces.add(board[toRow][toCol].id);
+
+    if (newLevel >= 13 && newLevel < MAX_LEVEL) soundEvolve();
+    else soundFuse();
+
+    setTimeout(() => fillEmptyCell(fromRow, fromCol), 300);
+  }
+
+  score += newLevel * 10;
+  fusions++;
+  stats.fusions = fusions;
+  if (newLevel > maxLevelReached && newLevel <= MAX_LEVEL) {
+    maxLevelReached = newLevel;
+    stats.maxLevel = maxLevelReached;
+  }
+  stats.score = score;
+  saveStats();
+  checkAchievements();
+
+  selectedCell = null;
+  renderBoard();
+  saveGame();
+
+  if (newLevel === MAX_LEVEL) {
+    gameOver = true;
+    clearInterval(timerInterval);
+    if (gameMode === 'challenge') {
+      stats.challengeWins++;
+      if (timeLeft > 60) stats.fastWins++;
+      saveStats();
+      checkAchievements();
+    }
+    setTimeout(() => showVictory(), 1000);
+  }
+
+  if (newLevel >= 13 && newLevel < MAX_LEVEL) {
+    const evolution = CHAINS[currentChain].evolution[newLevel - 1];
+    if (evolution) {
+      setTimeout(() => showToast(`🎉 Evoluiu para ${evolution.emoji} ${evolution.name}!`), 400);
+    }
+  }
+}
+
+function fillEmptyCell(row, col) {
+  if (board[row][col] === null && !gameOver && !blockedCells.some(b => b.row === row && b.col === col)) {
+    board[row][col] = { level: 1, id: nextPieceId++, justEvolved: false };
+    animatedPieces.add(board[row][col].id);
+    renderBoard();
+    saveGame();
+  }
+}
+
+function spawnPieces() {
+  if (gameOver) return;
+
+  const emptyCells = [];
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (!board[r][c] && !blockedCells.some(b => b.row === r && b.col === c)) {
+        emptyCells.push({ row: r, col: c });
+      }
+    }
+  }
+
+  if (emptyCells.length === 0) {
+    showToast('️ Tabuleiro cheio!');
+    return;
+  }
+
+  emptyCells.forEach(({ row, col }) => {
+    board[row][col] = { level: 1, id: nextPieceId++, justEvolved: false };
+    animatedPieces.add(board[row][col].id);
+  });
+
+  selectedCell = null;
+  renderBoard();
+  saveGame();
+  showToast(`✨ ${emptyCells.length} peça(s) gerada(s)!`);
+}
+
+function updateSpawnButton() {
+  const spawnBtn = document.getElementById('spawnBtn');
+  const hasEmpty = board.some((row, r) => row.some((cell, c) => cell === null && !blockedCells.some(b => b.row === r && b.col === c)));
+  spawnBtn.disabled = !hasEmpty || gameOver;
+}
+
+function showVictory() {
+  soundWin();
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalFusions').textContent = fusions;
+  document.getElementById('victoryOverlay').classList.add('show');
+  clearSavedGame();
+}
+
+function closeVictory() {
+  document.getElementById('victoryOverlay').classList.remove('show');
+  resetGame(false);
+}
+
+function goHome() {
+  saveGame();
+  window.location.href = '../index.html';
+}
+
+function updateStats() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('fusions').textContent = fusions;
+  document.getElementById('maxLevel').textContent = maxLevelReached;
+}
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function startLevel() {
+  clearInterval(timerInterval);
+  initBoard();
+  selectedCell = null;
+  score = 0;
+  fusions = 0;
+  maxLevelReached = 1;
+  gameOver = false;
+  nextPieceId = 1;
+  animatedPieces.clear();
+  powerups = { bomb: 3, shuffle: 2, time: 2 };
+  timeLeft = 0;
+  
+  if (gameMode === 'challenge') {
+    generateObstacles();
+  } else {
+    blockedCells = [];
+  }
+  
+  renderBoard();
+  startTimer();
+  updatePowerupButtons();
+  
+  setTimeout(() => spawnPieces(), 300);
+}
+
+function resetGame(confirmReset = true) {
+  if (confirmReset) {
+    if (!confirm('Iniciar novo jogo? O progresso atual será perdido.')) return;
+  }
+  clearSavedGame();
+  startLevel();
+  showToast('🔄 Novo jogo iniciado!');
+}
+
+function handleFirstInteraction() {
+  initAudio();
+  if (!muted) startMusic();
+  document.removeEventListener('click', handleFirstInteraction);
+  document.removeEventListener('touchstart', handleFirstInteraction);
+}
+
+document.getElementById('spawnBtn').addEventListener('click', () => { spawnPieces(); });
+document.getElementById('resetBtn').addEventListener('click', () => resetGame(true));
+document.getElementById('homeBtn').addEventListener('click', goHome);
+
+document.addEventListener('click', handleFirstInteraction);
+document.addEventListener('touchstart', handleFirstInteraction);
+
+loadStats();
+renderChainSelector();
+
+if (hasSavedGame()) {
+  showSavedGameModal();
+} else {
+  startLevel();
+}
 </script>
 
 </body>
