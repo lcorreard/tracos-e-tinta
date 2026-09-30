@@ -59,7 +59,6 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  /* ✅ NOVO: Header simplificado (só título) */
   .header-compact {
     display: flex;
     justify-content: center;
@@ -68,9 +67,7 @@
     text-align: center;
   }
 
-  .header-title {
-    flex: 1;
-  }
+  .header-title { flex: 1; }
 
   h1 {
     font-family: 'Caveat', cursive;
@@ -83,13 +80,8 @@
     font-weight: 700;
   }
 
-  .subtitle {
-    color: #a0a0c0;
-    font-size: 0.7rem;
-    font-style: italic;
-  }
+  .subtitle { color: #a0a0c0; font-size: 0.7rem; font-style: italic; }
 
-  /* ✅ NOVO: Painel de configurações (recolhível) */
   .settings-panel {
     max-height: 0;
     overflow: hidden;
@@ -105,13 +97,8 @@
     padding: 12px;
   }
 
-  .settings-section {
-    margin-bottom: 12px;
-  }
-
-  .settings-section:last-child {
-    margin-bottom: 0;
-  }
+  .settings-section { margin-bottom: 12px; }
+  .settings-section:last-child { margin-bottom: 0; }
 
   .settings-label {
     font-size: 0.75rem;
@@ -121,11 +108,7 @@
     margin-bottom: 6px;
   }
 
-  .settings-buttons {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
+  .settings-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
 
   .settings-btn {
     flex: 1;
@@ -142,32 +125,13 @@
     text-align: center;
   }
 
-  .settings-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-  }
+  .settings-btn:hover { background: rgba(255, 255, 255, 0.2); }
+  .settings-btn.active { border-color: #ffd700; background: rgba(255, 215, 0, 0.2); }
+  .settings-btn.danger { border-color: #a62e2e; }
+  .settings-btn.danger:hover { background: rgba(166, 46, 46, 0.3); }
+  .settings-btn.success { border-color: #2e7336; }
+  .settings-btn.success:hover { background: rgba(46, 115, 54, 0.3); }
 
-  .settings-btn.active {
-    border-color: #ffd700;
-    background: rgba(255, 215, 0, 0.2);
-  }
-
-  .settings-btn.danger {
-    border-color: #a62e2e;
-  }
-
-  .settings-btn.danger:hover {
-    background: rgba(166, 46, 46, 0.3);
-  }
-
-  .settings-btn.success {
-    border-color: #2e7336;
-  }
-
-  .settings-btn.success:hover {
-    background: rgba(46, 115, 54, 0.3);
-  }
-
-  /* ✅ NOVO: Estatísticas em linha única compacta */
   .stats-bar {
     display: flex;
     justify-content: space-around;
@@ -179,25 +143,9 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .stat-label {
-    font-size: 0.6rem;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .stat-value {
-    font-size: 1rem;
-    font-weight: bold;
-    color: #ffd700;
-    font-family: 'Caveat', cursive;
-  }
+  .stat { display: flex; flex-direction: column; align-items: center; }
+  .stat-label { font-size: 0.6rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 1rem; font-weight: bold; color: #ffd700; font-family: 'Caveat', cursive; }
 
   .board {
     display: grid;
@@ -239,11 +187,7 @@
     border: 2px solid #a62e2e;
   }
   
-  .cell.blocked::after {
-    content: '🔒';
-    font-size: 1.3rem;
-    opacity: 0.7;
-  }
+  .cell.blocked::after { content: '🔒'; font-size: 1.3rem; opacity: 0.7; }
 
   .cell.selected {
     border-color: #ffd700;
@@ -262,17 +206,9 @@
   .emoji { font-size: clamp(2rem, 9vw, 3.2rem); line-height: 1; flex-shrink: 0; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); transition: transform 0.2s ease; }
   .cell:hover .emoji { transform: scale(1.1); }
 
-  .powerups-bar {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 10px;
-    justify-content: center;
-  }
+  .powerups-bar { display: flex; gap: 6px; margin-bottom: 10px; justify-content: center; }
 
-  .powerup-wrapper {
-    flex: 1;
-    position: relative;
-  }
+  .powerup-wrapper { flex: 1; position: relative; }
 
   .powerup-btn {
     width: 100%;
@@ -333,33 +269,10 @@
     transform: translateX(-50%) translateY(0);
   }
 
-  .tooltip-title {
-    font-family: 'Caveat', cursive;
-    font-size: 1.3rem;
-    color: #ffd700;
-    margin-bottom: 6px;
-    font-weight: 700;
-  }
-
-  .tooltip-desc {
-    font-size: 0.8rem;
-    color: #fff;
-    margin-bottom: 6px;
-    line-height: 1.3;
-  }
-
-  .tooltip-tip {
-    font-size: 0.75rem;
-    color: #a0a0c0;
-    font-style: italic;
-    border-top: 1px solid rgba(255, 215, 0, 0.3);
-    padding-top: 6px;
-    margin-top: 6px;
-  }
-
-  .tooltip-tip::before {
-    content: '💡 ';
-  }
+  .tooltip-title { font-family: 'Caveat', cursive; font-size: 1.3rem; color: #ffd700; margin-bottom: 6px; font-weight: 700; }
+  .tooltip-desc { font-size: 0.8rem; color: #fff; margin-bottom: 6px; line-height: 1.3; }
+  .tooltip-tip { font-size: 0.75rem; color: #a0a0c0; font-style: italic; border-top: 1px solid rgba(255, 215, 0, 0.3); padding-top: 6px; margin-top: 6px; }
+  .tooltip-tip::before { content: '💡 '; }
 
   .spawn-btn-container { margin-bottom: 8px; }
 
@@ -401,7 +314,7 @@
 
   .toast.show { transform: translateX(-50%) translateY(0); }
 
-  .victory-overlay, .table-modal, .achievements-modal, .save-modal, .settings-modal {
+  .victory-overlay, .table-modal, .achievements-modal, .save-modal {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
@@ -413,7 +326,7 @@
     padding: 20px;
   }
 
-  .victory-overlay.show, .table-modal.show, .achievements-modal.show, .save-modal.show, .settings-modal.show { display: flex; animation: fadeIn 0.5s ease; }
+  .victory-overlay.show, .table-modal.show, .achievements-modal.show, .save-modal.show, .tutorial-modal.show { display: flex; animation: fadeIn 0.5s ease; }
 
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -499,7 +412,6 @@
   .achievement-item .ach-desc { color: #a0a0c0; font-size: 0.85rem; }
   .achievement-item .ach-status { font-size: 1.5rem; }
 
-  /* ✅ NOVO: Botões flutuantes (todos no mesmo padrão) */
   .floating-btn {
     position: fixed;
     width: 44px;
@@ -518,8 +430,6 @@
   }
 
   .floating-btn:active { transform: scale(0.9); }
-  
-  /* ✅ NOVO: Posicionamento dos botões flutuantes */
   #tableBtn { top: 10px; left: 10px; background: rgba(184, 137, 47, 0.85); color: #fff; }
   #achievementsBtn { top: 60px; left: 10px; background: rgba(155, 89, 182, 0.85); color: #fff; }
   #menuBtn { top: 10px; right: 10px; background: rgba(102, 126, 234, 0.85); color: #fff; }
@@ -561,6 +471,159 @@
 
   .save-indicator.show { opacity: 1; }
 
+  /* ============================================
+     ✅ NOVO: Tutorial Interativo
+     ============================================ */
+  .tutorial-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.92);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+  }
+
+  .tutorial-card {
+    background: linear-gradient(135deg, #1e1e3f 0%, #2a2a5f 100%);
+    border-radius: 20px;
+    padding: 30px 25px;
+    max-width: 450px;
+    width: 95%;
+    border: 3px solid #ffd700;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+    color: #fff;
+    text-align: center;
+    position: relative;
+    animation: slideUp 0.5s ease;
+  }
+
+  .tutorial-icon {
+    font-size: 4rem;
+    margin-bottom: 15px;
+    animation: bounce 2s infinite;
+  }
+
+  .tutorial-title {
+    font-family: 'Caveat', cursive;
+    font-size: 2.2rem;
+    color: #ffd700;
+    margin-bottom: 15px;
+    font-weight: 700;
+  }
+
+  .tutorial-text {
+    font-size: 1rem;
+    color: #e0e0e0;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    min-height: 60px;
+  }
+
+  .tutorial-text strong {
+    color: #ffd700;
+  }
+
+  /* Indicadores de progresso (dots) */
+  .tutorial-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .tutorial-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+  }
+
+  .tutorial-dot.active {
+    background: #ffd700;
+    width: 25px;
+    border-radius: 5px;
+  }
+
+  .tutorial-buttons {
+    display: flex;
+    gap: 10px;
+  }
+
+  .tutorial-btn {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #ffd700;
+    border-radius: 10px;
+    background: transparent;
+    color: #ffd700;
+    cursor: pointer;
+    font-family: 'Kalam', cursive;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+
+  .tutorial-btn:hover {
+    background: #ffd700;
+    color: #1e1e3f;
+    transform: translateY(-2px);
+  }
+
+  .tutorial-btn.primary {
+    background: #ffd700;
+    color: #1e1e3f;
+  }
+
+  .tutorial-btn.primary:hover {
+    background: #fff;
+    border-color: #fff;
+  }
+
+  .tutorial-btn.skip {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #a0a0c0;
+    flex: 0.5;
+  }
+
+  .tutorial-btn.skip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  .tutorial-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.8rem;
+    cursor: pointer;
+    width: auto;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .tutorial-close:hover {
+    color: #ffd700;
+    transform: scale(1.1);
+  }
+
+  /* Slide transition */
+  .tutorial-card.slide-in {
+    animation: slideIn 0.4s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
   @media (max-width: 480px) {
     body { padding: 5px; }
     .game-container { padding: 8px; }
@@ -583,23 +646,26 @@
     .tooltip-desc { font-size: 0.7rem; }
     .tooltip-tip { font-size: 0.65rem; }
     .settings-btn { font-size: 0.75rem; padding: 6px; min-width: 70px; }
+    
+    .tutorial-card { padding: 25px 20px; }
+    .tutorial-icon { font-size: 3.5rem; }
+    .tutorial-title { font-size: 1.8rem; }
+    .tutorial-text { font-size: 0.95rem; }
   }
 
-  .modal-content::-webkit-scrollbar, .victory-card::-webkit-scrollbar { width: 6px; }
-  .modal-content::-webkit-scrollbar-track, .victory-card::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 3px; }
-  .modal-content::-webkit-scrollbar-thumb, .victory-card::-webkit-scrollbar-thumb { background: #ffd700; border-radius: 3px; }
+  .modal-content::-webkit-scrollbar, .victory-card::-webkit-scrollbar, .tutorial-card::-webkit-scrollbar { width: 6px; }
+  .modal-content::-webkit-scrollbar-track, .victory-card::-webkit-scrollbar-track, .tutorial-card::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 3px; }
+  .modal-content::-webkit-scrollbar-thumb, .victory-card::-webkit-scrollbar-thumb, .tutorial-card::-webkit-scrollbar-thumb { background: #ffd700; border-radius: 3px; }
 </style>
 </head>
 <body>
 
-<!-- ✅ NOVO: Todos os botões flutuantes no mesmo padrão -->
 <button class="floating-btn" id="tableBtn" title="Tabela de Evolução">📖</button>
 <button class="floating-btn" id="achievementsBtn" title="Conquistas">🏆</button>
 <button class="floating-btn" id="menuBtn" title="Configurações">⚙️</button>
 <button class="floating-btn" id="soundBtn" title="Som">🔊</button>
 
 <div class="game-container">
-  <!-- ✅ NOVO: Header simplificado (só título) -->
   <div class="header-compact">
     <div class="header-title">
       <h1>🌌 JuntaTudo</h1>
@@ -607,7 +673,6 @@
     </div>
   </div>
 
-  <!-- ✅ NOVO: Painel de configurações (recolhível) -->
   <div class="settings-panel" id="settingsPanel">
     <div class="settings-section">
       <div class="settings-label">🎮 Modo de Jogo</div>
@@ -627,12 +692,12 @@
       <div class="settings-buttons">
         <button class="settings-btn success" id="saveBtn">💾 Salvar</button>
         <button class="settings-btn danger" id="resetBtn">🔄 Novo Jogo</button>
+        <button class="settings-btn" id="tutorialBtn">📖 Tutorial</button>
         <button class="settings-btn" id="homeBtn">🏠 Menu</button>
       </div>
     </div>
   </div>
 
-  <!-- ✅ NOVO: Estatísticas compactas -->
   <div class="stats-bar">
     <div class="stat">
       <div class="stat-label">Pontos</div>
@@ -652,7 +717,6 @@
     </div>
   </div>
 
-  <!-- Power-ups com tooltips -->
   <div class="powerups-bar">
     <div class="powerup-wrapper">
       <button class="powerup-btn" id="bombBtn" title="Bomba">
@@ -701,6 +765,21 @@
 <div class="toast" id="toast"></div>
 
 <div class="save-indicator" id="saveIndicator">💾 Jogo salvo!</div>
+
+<!-- ✅ NOVO: Modal do Tutorial Interativo -->
+<div class="tutorial-modal" id="tutorialModal">
+  <div class="tutorial-card" id="tutorialCard">
+    <button class="tutorial-close" id="tutorialClose">&times;</button>
+    <div class="tutorial-icon" id="tutorialIcon">🌌</div>
+    <h2 class="tutorial-title" id="tutorialTitle">Bem-vindo ao JuntaTudo!</h2>
+    <p class="tutorial-text" id="tutorialText">Vamos aprender a jogar em poucos passos?</p>
+    <div class="tutorial-dots" id="tutorialDots"></div>
+    <div class="tutorial-buttons">
+      <button class="tutorial-btn skip" id="tutorialSkip">Pular</button>
+      <button class="tutorial-btn primary" id="tutorialNext">Próximo ▶</button>
+    </div>
+  </div>
+</div>
 
 <div class="table-modal" id="tableModal">
   <div class="modal-content">
@@ -772,7 +851,7 @@ const CHAINS = {
   },
   animals: {
     name: '🦁 Animais',
-    emoji: '🦁',
+    emoji: '',
     evolution: [
       { level: 1,  emoji: '\u{1F41B}', name: 'Lagarta' },
       { level: 2,  emoji: '\u{1F98B}', name: 'Borboleta' },
@@ -839,6 +918,7 @@ const BOARD_SIZE = 5;
 const MAX_LEVEL = 15;
 const SAVE_KEY = 'juntatudo_savegame';
 const STATS_KEY = 'juntatudo_stats';
+const TUTORIAL_KEY = 'juntatudo_tutorial_done'; // ✅ NOVO: chave do tutorial
 
 const ACHIEVEMENTS = [
   { id: 'first_fusion', name: 'Primeira Fusão', desc: 'Faça sua primeira combinação', icon: '🎯', check: (stats) => stats.fusions >= 1 },
@@ -853,6 +933,35 @@ const ACHIEVEMENTS = [
   { id: 'challenge_win', name: 'Desafiante', desc: 'Vença no modo desafio', icon: '⚔️', check: (stats) => stats.challengeWins >= 1 },
   { id: 'all_chains', name: 'Explorador', desc: 'Jogue todas as cadeias', icon: '🗺️', check: (stats) => stats.chainsPlayed && stats.chainsPlayed.length >= 4 },
   { id: 'speed_demon', name: 'Velocista', desc: 'Vença com mais de 60s restantes', icon: '⚡', check: (stats) => stats.fastWins >= 1 }
+];
+
+// ✅ NOVO: Conteúdo do Tutorial (5 slides)
+const TUTORIAL_SLIDES = [
+  {
+    icon: '🌌',
+    title: 'Bem-vindo ao JuntaTudo!',
+    text: 'Este é um jogo de <strong>evolução por combinação</strong>. Seu objetivo é fundir figuras iguais para criar figuras cada vez mais poderosas, até alcançar o nível máximo!'
+  },
+  {
+    icon: '👆',
+    title: 'Como Jogar',
+    text: 'Toque em uma peça para <strong>selecioná-la</strong> (ela brilhará em dourado). Depois, toque em outra peça <strong>do mesmo tipo</strong> para fundi-las e evoluir para o próximo nível!'
+  },
+  {
+    icon: '💣',
+    title: 'Power-ups Estratégicos',
+    text: 'Use a <strong>💣 Bomba</strong> para eliminar peças, o <strong> Embaralhar</strong> para reorganizar o tabuleiro, e o <strong>️ Tempo Extra</strong> no modo desafio. Use com sabedoria — são limitados!'
+  },
+  {
+    icon: '🔗',
+    title: '4 Cadeias de Evolução',
+    text: 'Escolha entre <strong>🌌 Cósmica</strong>, <strong> Animais</strong>, <strong>💻 Tecnologia</strong> e <strong>🔮 Magia</strong>. Cada uma tem 15 níveis únicos para descobrir!'
+  },
+  {
+    icon: '🏆',
+    title: 'Pronto para Jogar!',
+    text: 'Seu progresso é <strong>salvo automaticamente</strong>. Abra o menu ⚙️ para mudar modo, cadeia ou ver conquistas. <strong>Boa diversão!</strong>'
+  }
 ];
 
 let currentChain = 'cosmic';
@@ -883,7 +992,101 @@ let stats = {
   achievements: []
 };
 
-// ✅ NOVO: Toggle do menu de configurações
+// ============================================
+// ✅ NOVO: Sistema de Tutorial Interativo
+// ============================================
+let currentTutorialSlide = 0;
+
+function shouldShowTutorial() {
+  return !localStorage.getItem(TUTORIAL_KEY);
+}
+
+function markTutorialAsDone() {
+  localStorage.setItem(TUTORIAL_KEY, 'true');
+}
+
+function resetTutorial() {
+  localStorage.removeItem(TUTORIAL_KEY);
+  showToast('📖 Tutorial será exibido na próxima vez!');
+}
+
+function openTutorial() {
+  currentTutorialSlide = 0;
+  renderTutorialSlide();
+  document.getElementById('tutorialModal').classList.add('show');
+  soundClick();
+}
+
+function closeTutorial() {
+  document.getElementById('tutorialModal').classList.remove('show');
+  soundClick();
+}
+
+function nextTutorialSlide() {
+  currentTutorialSlide++;
+  if (currentTutorialSlide >= TUTORIAL_SLIDES.length) {
+    finishTutorial();
+    return;
+  }
+  renderTutorialSlide();
+  soundClick();
+}
+
+function finishTutorial() {
+  markTutorialAsDone();
+  closeTutorial();
+  showToast('🎉 Tutorial concluído! Bom jogo!');
+}
+
+function renderTutorialSlide() {
+  const slide = TUTORIAL_SLIDES[currentTutorialSlide];
+  const card = document.getElementById('tutorialCard');
+  
+  // Animação de entrada
+  card.classList.remove('slide-in');
+  void card.offsetWidth; // força reflow
+  card.classList.add('slide-in');
+  
+  document.getElementById('tutorialIcon').textContent = slide.icon;
+  document.getElementById('tutorialTitle').textContent = slide.title;
+  document.getElementById('tutorialText').innerHTML = slide.text;
+  
+  // Atualizar dots
+  const dotsContainer = document.getElementById('tutorialDots');
+  dotsContainer.innerHTML = '';
+  TUTORIAL_SLIDES.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'tutorial-dot' + (i === currentTutorialSlide ? ' active' : '');
+    dotsContainer.appendChild(dot);
+  });
+  
+  // Atualizar botão "Próximo"
+  const nextBtn = document.getElementById('tutorialNext');
+  if (currentTutorialSlide === TUTORIAL_SLIDES.length - 1) {
+    nextBtn.textContent = 'Começar a Jogar! 🎮';
+  } else {
+    nextBtn.textContent = 'Próximo ▶';
+  }
+}
+
+const tutorialModal = document.getElementById('tutorialModal');
+const tutorialNext = document.getElementById('tutorialNext');
+const tutorialSkip = document.getElementById('tutorialSkip');
+const tutorialClose = document.getElementById('tutorialClose');
+
+tutorialNext.addEventListener('click', nextTutorialSlide);
+tutorialSkip.addEventListener('click', finishTutorial);
+tutorialClose.addEventListener('click', closeTutorial);
+
+tutorialModal.addEventListener('click', (e) => {
+  if (e.target === tutorialModal) closeTutorial();
+});
+
+// Botão de tutorial no menu de configurações
+document.getElementById('tutorialBtn').addEventListener('click', () => {
+  openTutorial();
+});
+
 const menuBtn = document.getElementById('menuBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 
@@ -1095,7 +1298,7 @@ function soundPowerup() { [440, 554, 659].forEach((n, i) => setTimeout(() => pla
 const soundBtn = document.getElementById('soundBtn');
 soundBtn.addEventListener('click', () => {
   muted = !muted;
-  soundBtn.textContent = muted ? '🔇' : '🔊';
+  soundBtn.textContent = muted ? '' : '🔊';
   if (muted) stopMusic(); else startMusic();
 });
 
@@ -1182,7 +1385,7 @@ document.getElementById('bombBtn').addEventListener('click', () => {
     selectedCell = null;
     renderBoard();
     saveGame();
-    showToast('💣 Peça eliminada!');
+    showToast(' Peça eliminada!');
     updatePowerupButtons();
   } else if (powerups.bomb === 0) {
     showToast('Sem bombas!');
@@ -1261,7 +1464,7 @@ function startTimer() {
       if (timeLeft <= 0) {
         clearInterval(timerInterval);
         gameOver = true;
-        showToast('⏱️ Tempo esgotado!');
+        showToast('️ Tempo esgotado!');
         saveGame();
         setTimeout(() => showVictory(), 1000);
       }
@@ -1317,7 +1520,7 @@ function renderAchievements() {
         <div class="ach-name">${ach.name}</div>
         <div class="ach-desc">${ach.desc}</div>
       </div>
-      <span class="ach-status">${unlocked ? '✅' : '🔒'}</span>
+      <span class="ach-status">${unlocked ? '✅' : ''}</span>
     `;
     list.appendChild(item);
   });
@@ -1658,10 +1861,18 @@ document.addEventListener('touchstart', handleFirstInteraction);
 loadStats();
 renderChainSelector();
 
+// ✅ NOVO: Verifica se deve mostrar o tutorial na primeira vez
 if (hasSavedGame()) {
   showSavedGameModal();
 } else {
   startLevel();
+}
+
+// Mostra o tutorial se for a primeira vez
+if (shouldShowTutorial()) {
+  setTimeout(() => {
+    openTutorial();
+  }, 800); // Pequeno delay para o jogo carregar primeiro
 }
 </script>
 
