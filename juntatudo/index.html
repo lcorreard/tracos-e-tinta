@@ -18,7 +18,7 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding: 10px;
+    padding: 8px;
     overflow-x: hidden;
     position: relative;
   }
@@ -52,77 +52,180 @@
     background: rgba(20, 25, 45, 0.85);
     backdrop-filter: blur(10px);
     border-radius: 15px;
-    padding: 15px;
+    padding: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     position: relative;
     z-index: 1;
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  header { text-align: center; margin-bottom: 10px; }
+  /* ✅ NOVO: Header compacto com menu */
+  .header-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .header-title {
+    flex: 1;
+    text-align: center;
+  }
 
   h1 {
     font-family: 'Caveat', cursive;
-    font-size: 2rem;
+    font-size: 1.6rem;
     background: linear-gradient(90deg, #ffd700, #ff6b6b, #9b59b6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
     font-weight: 700;
   }
 
-  .subtitle { color: #a0a0c0; font-size: 0.8rem; font-style: italic; }
+  .subtitle {
+    color: #a0a0c0;
+    font-size: 0.7rem;
+    font-style: italic;
+  }
 
-  .top-actions {
+  /* ✅ NOVO: Botão de menu */
+  .menu-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 1.3rem;
+    cursor: pointer;
     display: flex;
-    justify-content: flex-end;
-    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .menu-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+
+  /* ✅ NOVO: Painel de configurações (slide down) */
+  .settings-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    margin-bottom: 0;
+  }
+
+  .settings-panel.open {
+    max-height: 500px;
     margin-bottom: 10px;
-    padding: 0 5px;
+    padding: 12px;
+  }
+
+  .settings-section {
+    margin-bottom: 12px;
+  }
+
+  .settings-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .settings-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .settings-buttons {
+    display: flex;
+    gap: 6px;
     flex-wrap: wrap;
   }
 
-  .action-btn {
-    padding: 6px 12px;
+  .settings-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: 'Kalam', cursive;
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
-    backdrop-filter: blur(5px);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Kalam', cursive;
+    font-size: 0.8rem;
+    text-align: center;
   }
 
-  .action-btn:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-1px); }
-  .action-btn.home:hover { background: rgba(46, 115, 54, 0.4); border-color: #2e7336; }
-  .action-btn.reset:hover { background: rgba(166, 46, 46, 0.4); border-color: #a62e2e; }
-  .action-btn.save:hover { background: rgba(102, 126, 234, 0.4); border-color: #667eea; }
+  .settings-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
 
+  .settings-btn.active {
+    border-color: #ffd700;
+    background: rgba(255, 215, 0, 0.2);
+  }
+
+  .settings-btn.danger {
+    border-color: #a62e2e;
+  }
+
+  .settings-btn.danger:hover {
+    background: rgba(166, 46, 46, 0.3);
+  }
+
+  .settings-btn.success {
+    border-color: #2e7336;
+  }
+
+  .settings-btn.success:hover {
+    background: rgba(46, 115, 54, 0.3);
+  }
+
+  /* ✅ NOVO: Estatísticas em linha única compacta */
   .stats-bar {
     display: flex;
     justify-content: space-around;
     align-items: center;
     background: rgba(0, 0, 0, 0.3);
-    padding: 8px 12px;
-    border-radius: 10px;
-    margin-bottom: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .stat { display: flex; flex-direction: column; align-items: center; }
-  .stat-label { font-size: 0.65rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-  .stat-value { font-size: 1.2rem; font-weight: bold; color: #ffd700; font-family: 'Caveat', cursive; }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stat-label {
+    font-size: 0.6rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #ffd700;
+    font-family: 'Caveat', cursive;
+  }
 
   .board {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    margin-bottom: 12px;
-    padding: 12px;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding: 10px;
     background: rgba(0, 0, 0, 0.4);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -131,7 +234,7 @@
   .cell {
     aspect-ratio: 1;
     background: rgba(30, 35, 60, 0.8);
-    border-radius: 12px;
+    border-radius: 10px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -159,7 +262,7 @@
   
   .cell.blocked::after {
     content: '🔒';
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     opacity: 0.7;
   }
 
@@ -177,17 +280,16 @@
   @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); } 100% { transform: scale(1); opacity: 1; } }
   @keyframes merge { 0% { transform: scale(1); } 40% { transform: scale(1.4) rotate(8deg); filter: brightness(1.5); } 100% { transform: scale(1); } }
 
-  .emoji { font-size: clamp(2.5rem, 11vw, 3.8rem); line-height: 1; flex-shrink: 0; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); transition: transform 0.2s ease; }
+  .emoji { font-size: clamp(2rem, 9vw, 3.2rem); line-height: 1; flex-shrink: 0; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); transition: transform 0.2s ease; }
   .cell:hover .emoji { transform: scale(1.1); }
 
   .powerups-bar {
     display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 10px;
     justify-content: center;
   }
 
-  /* ✅ NOVO: Power-ups com tooltip */
   .powerup-wrapper {
     flex: 1;
     position: relative;
@@ -195,28 +297,27 @@
 
   .powerup-btn {
     width: 100%;
-    padding: 10px;
+    padding: 8px;
     border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
+    border-radius: 8px;
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
     cursor: pointer;
     transition: all 0.2s;
     font-family: 'Kalam', cursive;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     position: relative;
   }
 
   .powerup-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); transform: translateY(-2px); }
   .powerup-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .powerup-btn .icon { font-size: 1.5rem; }
-  .powerup-btn .count { font-size: 0.7rem; color: #ffd700; }
+  .powerup-btn .icon { font-size: 1.3rem; }
+  .powerup-btn .count { font-size: 0.65rem; color: #ffd700; }
 
-  /* ✅ NOVO: Tooltip dos power-ups */
   .powerup-tooltip {
     position: absolute;
     bottom: calc(100% + 10px);
@@ -281,14 +382,14 @@
     content: '💡 ';
   }
 
-  .spawn-btn-container { margin-bottom: 10px; }
+  .spawn-btn-container { margin-bottom: 8px; }
 
   .btn-spawn {
     width: 100%;
-    padding: 14px;
+    padding: 12px;
     border: 2px solid #667eea;
-    border-radius: 12px;
-    font-size: 1rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -321,7 +422,7 @@
 
   .toast.show { transform: translateX(-50%) translateY(0); }
 
-  .victory-overlay, .table-modal, .achievements-modal, .save-modal {
+  .victory-overlay, .table-modal, .achievements-modal, .save-modal, .settings-modal {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
@@ -333,7 +434,7 @@
     padding: 20px;
   }
 
-  .victory-overlay.show, .table-modal.show, .achievements-modal.show, .save-modal.show { display: flex; animation: fadeIn 0.5s ease; }
+  .victory-overlay.show, .table-modal.show, .achievements-modal.show, .save-modal.show, .settings-modal.show { display: flex; animation: fadeIn 0.5s ease; }
 
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -421,11 +522,11 @@
 
   .floating-btn {
     position: fixed;
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.3);
-    font-size: 22px;
+    font-size: 20px;
     cursor: pointer;
     z-index: 100;
     display: flex;
@@ -437,9 +538,9 @@
   }
 
   .floating-btn:active { transform: scale(0.9); }
-  #soundBtn { top: 15px; right: 15px; background: rgba(38, 56, 114, 0.85); color: #fff; }
-  #tableBtn { top: 15px; left: 15px; background: rgba(184, 137, 47, 0.85); color: #fff; }
-  #achievementsBtn { top: 70px; left: 15px; background: rgba(155, 89, 182, 0.85); color: #fff; }
+  #soundBtn { top: 10px; right: 10px; background: rgba(38, 56, 114, 0.85); color: #fff; }
+  #tableBtn { top: 10px; left: 10px; background: rgba(184, 137, 47, 0.85); color: #fff; }
+  #achievementsBtn { top: 60px; left: 10px; background: rgba(155, 89, 182, 0.85); color: #fff; }
 
   .evolution-list { display: flex; flex-direction: column; gap: 8px; }
 
@@ -458,54 +559,6 @@
   .evolution-item .evo-name { color: #fff; font-weight: bold; font-size: 1rem; }
   .evolution-item .evo-level { color: #ffd700; font-size: 0.8rem; }
   .evolution-arrow { text-align: center; color: #ffd700; font-size: 1.2rem; margin: 2px 0; }
-
-  .chain-selector {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-    overflow-x: auto;
-    padding: 5px 0;
-  }
-
-  .chain-btn {
-    flex: 1;
-    min-width: 80px;
-    padding: 8px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: 'Kalam', cursive;
-    font-size: 0.8rem;
-    text-align: center;
-  }
-
-  .chain-btn:hover { background: rgba(255, 255, 255, 0.2); }
-  .chain-btn.active { border-color: #ffd700; background: rgba(255, 215, 0, 0.2); }
-
-  .mode-selector {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .mode-btn {
-    flex: 1;
-    padding: 10px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: 'Kalam', cursive;
-    font-size: 0.9rem;
-  }
-
-  .mode-btn:hover { background: rgba(255, 255, 255, 0.2); }
-  .mode-btn.active { border-color: #ff6b6b; background: rgba(255, 107, 107, 0.2); }
 
   .save-indicator {
     position: fixed;
@@ -527,32 +580,26 @@
 
   @media (max-width: 480px) {
     body { padding: 5px; }
-    .game-container { padding: 10px; }
-    h1 { font-size: 1.6rem; }
-    .subtitle { font-size: 0.7rem; }
-    .board { gap: 5px; padding: 8px; }
-    .emoji { font-size: clamp(1.8rem, 10vw, 2.5rem); }
-    .action-btn { padding: 5px 10px; font-size: 0.7rem; }
-    .stat-value { font-size: 1rem; }
-    .stat-label { font-size: 0.6rem; }
-    .btn-spawn { padding: 12px; font-size: 0.9rem; }
-    .floating-btn { width: 42px; height: 42px; font-size: 18px; }
-    .powerup-btn { padding: 8px; font-size: 0.75rem; }
-    .powerup-btn .icon { font-size: 1.2rem; }
-    .chain-btn { min-width: 70px; font-size: 0.7rem; padding: 6px; }
-    .modal-content { padding: 20px 15px; }
-    .modal-content h2 { font-size: 1.8rem; }
-    .evolution-item .evo-emoji { font-size: 1.6rem; }
-    .evolution-item .evo-name { font-size: 0.9rem; }
-    
-    /* ✅ NOVO: Tooltip menor no mobile */
-    .powerup-tooltip {
-      width: 180px;
-      padding: 10px;
-    }
-    .tooltip-title { font-size: 1.1rem; }
-    .tooltip-desc { font-size: 0.75rem; }
-    .tooltip-tip { font-size: 0.7rem; }
+    .game-container { padding: 8px; }
+    h1 { font-size: 1.4rem; }
+    .subtitle { font-size: 0.65rem; }
+    .board { gap: 4px; padding: 8px; }
+    .emoji { font-size: clamp(1.6rem, 8vw, 2.5rem); }
+    .stat-value { font-size: 0.9rem; }
+    .stat-label { font-size: 0.55rem; }
+    .btn-spawn { padding: 10px; font-size: 0.85rem; }
+    .floating-btn { width: 38px; height: 38px; font-size: 18px; }
+    #tableBtn { top: 8px; left: 8px; }
+    #achievementsBtn { top: 52px; left: 8px; }
+    #soundBtn { top: 8px; right: 8px; }
+    .powerup-btn { padding: 6px; font-size: 0.7rem; }
+    .powerup-btn .icon { font-size: 1.1rem; }
+    .powerup-tooltip { width: 160px; padding: 8px; }
+    .tooltip-title { font-size: 1rem; }
+    .tooltip-desc { font-size: 0.7rem; }
+    .tooltip-tip { font-size: 0.65rem; }
+    .menu-btn { width: 36px; height: 36px; font-size: 1.1rem; }
+    .settings-btn { font-size: 0.75rem; padding: 6px; min-width: 70px; }
   }
 
   .modal-content::-webkit-scrollbar, .victory-card::-webkit-scrollbar { width: 6px; }
@@ -567,24 +614,42 @@
 <button class="floating-btn" id="soundBtn" title="Som">🔊</button>
 
 <div class="game-container">
-  <header>
-    <h1>🌌 JuntaTudo</h1>
-    <div class="subtitle">combine figuras iguais para evoluir</div>
-  </header>
-
-  <div class="top-actions">
-    <button class="action-btn save" id="saveBtn">💾 Salvar</button>
-    <button class="action-btn reset" id="resetBtn">🔄 Novo Jogo</button>
-    <button class="action-btn home" id="homeBtn">🏠 Menu</button>
+  <!-- ✅ NOVO: Header compacto com menu -->
+  <div class="header-compact">
+    <button class="menu-btn" id="menuBtn" title="Configurações">️</button>
+    <div class="header-title">
+      <h1>🌌 JuntaTudo</h1>
+      <div class="subtitle">combine figuras iguais para evoluir</div>
+    </div>
+    <div style="width: 40px;"></div> <!-- Espaçador para centralizar -->
   </div>
 
-  <div class="mode-selector">
-    <button class="mode-btn active" id="normalMode">🎮 Normal</button>
-    <button class="mode-btn" id="challengeMode">⚔️ Desafio</button>
+  <!-- ✅ NOVO: Painel de configurações (recolhível) -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-section">
+      <div class="settings-label">🎮 Modo de Jogo</div>
+      <div class="settings-buttons">
+        <button class="settings-btn active" id="normalMode">Normal</button>
+        <button class="settings-btn" id="challengeMode">⚔️ Desafio</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">🔗 Cadeia de Evolução</div>
+      <div class="settings-buttons" id="chainSelector"></div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label"> Ações</div>
+      <div class="settings-buttons">
+        <button class="settings-btn success" id="saveBtn">💾 Salvar</button>
+        <button class="settings-btn danger" id="resetBtn">🔄 Novo Jogo</button>
+        <button class="settings-btn" id="homeBtn">🏠 Menu</button>
+      </div>
+    </div>
   </div>
 
-  <div class="chain-selector" id="chainSelector"></div>
-
+  <!-- ✅ NOVO: Estatísticas compactas -->
   <div class="stats-bar">
     <div class="stat">
       <div class="stat-label">Pontos</div>
@@ -595,7 +660,7 @@
       <div class="stat-value" id="fusions">0</div>
     </div>
     <div class="stat">
-      <div class="stat-label">Máximo</div>
+      <div class="stat-label">Máx</div>
       <div class="stat-value" id="maxLevel">1</div>
     </div>
     <div class="stat">
@@ -604,7 +669,7 @@
     </div>
   </div>
 
-  <!-- ✅ NOVO: Power-ups com tooltips -->
+  <!-- Power-ups -->
   <div class="powerups-bar">
     <div class="powerup-wrapper">
       <button class="powerup-btn" id="bombBtn" title="Bomba">
@@ -745,7 +810,7 @@ const CHAINS = {
   },
   technology: {
     name: '💻 Tecnologia',
-    emoji: '',
+    emoji: '💻',
     evolution: [
       { level: 1,  emoji: '\u{1FAA8}', name: 'Pedra' },
       { level: 2,  emoji: '\u{1F528}', name: 'Martelo' },
@@ -796,13 +861,13 @@ const ACHIEVEMENTS = [
   { id: 'first_fusion', name: 'Primeira Fusão', desc: 'Faça sua primeira combinação', icon: '🎯', check: (stats) => stats.fusions >= 1 },
   { id: 'fusion_master', name: 'Mestre das Fusões', desc: 'Faça 50 fusões', icon: '🔬', check: (stats) => stats.fusions >= 50 },
   { id: 'level_5', name: 'Evolução Inicial', desc: 'Alcance o nível 5', icon: '⭐', check: (stats) => stats.maxLevel >= 5 },
-  { id: 'level_10', name: 'Evolução Avançada', desc: 'Alcance o nível 10', icon: '🌟', check: (stats) => stats.maxLevel >= 10 },
+  { id: 'level_10', name: 'Evolução Avançada', desc: 'Alcance o nível 10', icon: '', check: (stats) => stats.maxLevel >= 10 },
   { id: 'level_15', name: 'Evolução Máxima', desc: 'Alcance o nível 15', icon: '👑', check: (stats) => stats.maxLevel >= 15 },
   { id: 'score_1000', name: 'Mil Pontos', desc: 'Alcance 1000 pontos', icon: '💰', check: (stats) => stats.score >= 1000 },
   { id: 'score_5000', name: 'Cinco Mil', desc: 'Alcance 5000 pontos', icon: '🏅', check: (stats) => stats.score >= 5000 },
   { id: 'bomb_used', name: 'Demolidor', desc: 'Use uma bomba', icon: '💣', check: (stats) => stats.bombsUsed >= 1 },
-  { id: 'shuffle_used', name: 'Organizador', desc: 'Use o shuffle', icon: '🔀', check: (stats) => stats.shufflesUsed >= 1 },
-  { id: 'challenge_win', name: 'Desafiante', desc: 'Vença no modo desafio', icon: '⚔️', check: (stats) => stats.challengeWins >= 1 },
+  { id: 'shuffle_used', name: 'Organizador', desc: 'Use o shuffle', icon: '', check: (stats) => stats.shufflesUsed >= 1 },
+  { id: 'challenge_win', name: 'Desafiante', desc: 'Vença no modo desafio', icon: '️', check: (stats) => stats.challengeWins >= 1 },
   { id: 'all_chains', name: 'Explorador', desc: 'Jogue todas as cadeias', icon: '🗺️', check: (stats) => stats.chainsPlayed && stats.chainsPlayed.length >= 4 },
   { id: 'speed_demon', name: 'Velocista', desc: 'Vença com mais de 60s restantes', icon: '⚡', check: (stats) => stats.fastWins >= 1 }
 ];
@@ -834,6 +899,15 @@ let stats = {
   fastWins: 0,
   achievements: []
 };
+
+// ✅ NOVO: Toggle do menu de configurações
+const menuBtn = document.getElementById('menuBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+
+menuBtn.addEventListener('click', () => {
+  soundClick();
+  settingsPanel.classList.toggle('open');
+});
 
 function saveGame() {
   const saveData = {
@@ -938,7 +1012,7 @@ const saveModal = document.getElementById('saveModal');
 saveBtn.addEventListener('click', () => {
   soundClick();
   saveGame();
-  showToast('💾 Jogo salvo manualmente!');
+  showToast(' Jogo salvo manualmente!');
 });
 
 function startNewGame() {
@@ -1038,11 +1112,10 @@ function soundPowerup() { [440, 554, 659].forEach((n, i) => setTimeout(() => pla
 const soundBtn = document.getElementById('soundBtn');
 soundBtn.addEventListener('click', () => {
   muted = !muted;
-  soundBtn.textContent = muted ? '🔇' : '🔊';
+  soundBtn.textContent = muted ? '' : '🔊';
   if (muted) stopMusic(); else startMusic();
 });
 
-// ✅ NOVO: Tooltips para mobile (touch)
 document.querySelectorAll('.powerup-wrapper').forEach(wrapper => {
   let touchTimeout;
   
@@ -1071,8 +1144,9 @@ function renderChainSelector() {
   Object.keys(CHAINS).forEach(key => {
     const chain = CHAINS[key];
     const btn = document.createElement('button');
-    btn.className = 'chain-btn' + (key === currentChain ? ' active' : '');
-    btn.innerHTML = `${chain.emoji}<br>${chain.name.split(' ')[1]}`;
+    btn.className = 'settings-btn' + (key === currentChain ? ' active' : '');
+    btn.innerHTML = `${chain.emoji}`;
+    btn.title = chain.name;
     btn.addEventListener('click', () => {
       soundClick();
       currentChain = key;
@@ -1260,7 +1334,7 @@ function renderAchievements() {
         <div class="ach-name">${ach.name}</div>
         <div class="ach-desc">${ach.desc}</div>
       </div>
-      <span class="ach-status">${unlocked ? '✅' : ''}</span>
+      <span class="ach-status">${unlocked ? '✅' : '🔒'}</span>
     `;
     list.appendChild(item);
   });
@@ -1470,7 +1544,7 @@ function mergePieces(fromRow, fromCol, toRow, toCol) {
   if (newLevel >= 13 && newLevel < MAX_LEVEL) {
     const evolution = CHAINS[currentChain].evolution[newLevel - 1];
     if (evolution) {
-      setTimeout(() => showToast(`🎉 Evoluiu para ${evolution.emoji} ${evolution.name}!`), 400);
+      setTimeout(() => showToast(` Evoluiu para ${evolution.emoji} ${evolution.name}!`), 400);
     }
   }
 }
@@ -1497,7 +1571,7 @@ function spawnPieces() {
   }
 
   if (emptyCells.length === 0) {
-    showToast('️ Tabuleiro cheio!');
+    showToast('⚠️ Tabuleiro cheio!');
     return;
   }
 
