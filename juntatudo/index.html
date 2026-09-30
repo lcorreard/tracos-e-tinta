@@ -59,17 +59,17 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  /* ✅ NOVO: Header compacto com menu */
+  /* ✅ NOVO: Header simplificado (só título) */
   .header-compact {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-bottom: 8px;
+    text-align: center;
   }
 
   .header-title {
     flex: 1;
-    text-align: center;
   }
 
   h1 {
@@ -89,28 +89,7 @@
     font-style: italic;
   }
 
-  /* ✅ NOVO: Botão de menu */
-  .menu-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    font-size: 1.3rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-
-  .menu-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
-  }
-
-  /* ✅ NOVO: Painel de configurações (slide down) */
+  /* ✅ NOVO: Painel de configurações (recolhível) */
   .settings-panel {
     max-height: 0;
     overflow: hidden;
@@ -520,6 +499,7 @@
   .achievement-item .ach-desc { color: #a0a0c0; font-size: 0.85rem; }
   .achievement-item .ach-status { font-size: 1.5rem; }
 
+  /* ✅ NOVO: Botões flutuantes (todos no mesmo padrão) */
   .floating-btn {
     position: fixed;
     width: 44px;
@@ -538,9 +518,12 @@
   }
 
   .floating-btn:active { transform: scale(0.9); }
-  #soundBtn { top: 10px; right: 10px; background: rgba(38, 56, 114, 0.85); color: #fff; }
+  
+  /* ✅ NOVO: Posicionamento dos botões flutuantes */
   #tableBtn { top: 10px; left: 10px; background: rgba(184, 137, 47, 0.85); color: #fff; }
   #achievementsBtn { top: 60px; left: 10px; background: rgba(155, 89, 182, 0.85); color: #fff; }
+  #menuBtn { top: 10px; right: 10px; background: rgba(102, 126, 234, 0.85); color: #fff; }
+  #soundBtn { top: 60px; right: 10px; background: rgba(38, 56, 114, 0.85); color: #fff; }
 
   .evolution-list { display: flex; flex-direction: column; gap: 8px; }
 
@@ -591,14 +574,14 @@
     .floating-btn { width: 38px; height: 38px; font-size: 18px; }
     #tableBtn { top: 8px; left: 8px; }
     #achievementsBtn { top: 52px; left: 8px; }
-    #soundBtn { top: 8px; right: 8px; }
+    #menuBtn { top: 8px; right: 8px; }
+    #soundBtn { top: 52px; right: 8px; }
     .powerup-btn { padding: 6px; font-size: 0.7rem; }
     .powerup-btn .icon { font-size: 1.1rem; }
     .powerup-tooltip { width: 160px; padding: 8px; }
     .tooltip-title { font-size: 1rem; }
     .tooltip-desc { font-size: 0.7rem; }
     .tooltip-tip { font-size: 0.65rem; }
-    .menu-btn { width: 36px; height: 36px; font-size: 1.1rem; }
     .settings-btn { font-size: 0.75rem; padding: 6px; min-width: 70px; }
   }
 
@@ -609,19 +592,19 @@
 </head>
 <body>
 
+<!-- ✅ NOVO: Todos os botões flutuantes no mesmo padrão -->
 <button class="floating-btn" id="tableBtn" title="Tabela de Evolução">📖</button>
 <button class="floating-btn" id="achievementsBtn" title="Conquistas">🏆</button>
+<button class="floating-btn" id="menuBtn" title="Configurações">⚙️</button>
 <button class="floating-btn" id="soundBtn" title="Som">🔊</button>
 
 <div class="game-container">
-  <!-- ✅ NOVO: Header compacto com menu -->
+  <!-- ✅ NOVO: Header simplificado (só título) -->
   <div class="header-compact">
-    <button class="menu-btn" id="menuBtn" title="Configurações">️</button>
     <div class="header-title">
       <h1>🌌 JuntaTudo</h1>
       <div class="subtitle">combine figuras iguais para evoluir</div>
     </div>
-    <div style="width: 40px;"></div> <!-- Espaçador para centralizar -->
   </div>
 
   <!-- ✅ NOVO: Painel de configurações (recolhível) -->
@@ -640,7 +623,7 @@
     </div>
 
     <div class="settings-section">
-      <div class="settings-label"> Ações</div>
+      <div class="settings-label">🎯 Ações</div>
       <div class="settings-buttons">
         <button class="settings-btn success" id="saveBtn">💾 Salvar</button>
         <button class="settings-btn danger" id="resetBtn">🔄 Novo Jogo</button>
@@ -669,7 +652,7 @@
     </div>
   </div>
 
-  <!-- Power-ups -->
+  <!-- Power-ups com tooltips -->
   <div class="powerups-bar">
     <div class="powerup-wrapper">
       <button class="powerup-btn" id="bombBtn" title="Bomba">
@@ -861,13 +844,13 @@ const ACHIEVEMENTS = [
   { id: 'first_fusion', name: 'Primeira Fusão', desc: 'Faça sua primeira combinação', icon: '🎯', check: (stats) => stats.fusions >= 1 },
   { id: 'fusion_master', name: 'Mestre das Fusões', desc: 'Faça 50 fusões', icon: '🔬', check: (stats) => stats.fusions >= 50 },
   { id: 'level_5', name: 'Evolução Inicial', desc: 'Alcance o nível 5', icon: '⭐', check: (stats) => stats.maxLevel >= 5 },
-  { id: 'level_10', name: 'Evolução Avançada', desc: 'Alcance o nível 10', icon: '', check: (stats) => stats.maxLevel >= 10 },
+  { id: 'level_10', name: 'Evolução Avançada', desc: 'Alcance o nível 10', icon: '🌟', check: (stats) => stats.maxLevel >= 10 },
   { id: 'level_15', name: 'Evolução Máxima', desc: 'Alcance o nível 15', icon: '👑', check: (stats) => stats.maxLevel >= 15 },
   { id: 'score_1000', name: 'Mil Pontos', desc: 'Alcance 1000 pontos', icon: '💰', check: (stats) => stats.score >= 1000 },
   { id: 'score_5000', name: 'Cinco Mil', desc: 'Alcance 5000 pontos', icon: '🏅', check: (stats) => stats.score >= 5000 },
   { id: 'bomb_used', name: 'Demolidor', desc: 'Use uma bomba', icon: '💣', check: (stats) => stats.bombsUsed >= 1 },
-  { id: 'shuffle_used', name: 'Organizador', desc: 'Use o shuffle', icon: '', check: (stats) => stats.shufflesUsed >= 1 },
-  { id: 'challenge_win', name: 'Desafiante', desc: 'Vença no modo desafio', icon: '️', check: (stats) => stats.challengeWins >= 1 },
+  { id: 'shuffle_used', name: 'Organizador', desc: 'Use o shuffle', icon: '🔀', check: (stats) => stats.shufflesUsed >= 1 },
+  { id: 'challenge_win', name: 'Desafiante', desc: 'Vença no modo desafio', icon: '⚔️', check: (stats) => stats.challengeWins >= 1 },
   { id: 'all_chains', name: 'Explorador', desc: 'Jogue todas as cadeias', icon: '🗺️', check: (stats) => stats.chainsPlayed && stats.chainsPlayed.length >= 4 },
   { id: 'speed_demon', name: 'Velocista', desc: 'Vença com mais de 60s restantes', icon: '⚡', check: (stats) => stats.fastWins >= 1 }
 ];
@@ -1012,7 +995,7 @@ const saveModal = document.getElementById('saveModal');
 saveBtn.addEventListener('click', () => {
   soundClick();
   saveGame();
-  showToast(' Jogo salvo manualmente!');
+  showToast('💾 Jogo salvo manualmente!');
 });
 
 function startNewGame() {
@@ -1112,7 +1095,7 @@ function soundPowerup() { [440, 554, 659].forEach((n, i) => setTimeout(() => pla
 const soundBtn = document.getElementById('soundBtn');
 soundBtn.addEventListener('click', () => {
   muted = !muted;
-  soundBtn.textContent = muted ? '' : '🔊';
+  soundBtn.textContent = muted ? '🔇' : '🔊';
   if (muted) stopMusic(); else startMusic();
 });
 
@@ -1219,7 +1202,7 @@ document.getElementById('shuffleBtn').addEventListener('click', () => {
     shuffleBoard();
     renderBoard();
     saveGame();
-    showToast(' Tabuleiro embaralhado!');
+    showToast('🔀 Tabuleiro embaralhado!');
     updatePowerupButtons();
   } else {
     showToast('Sem shuffles!');
@@ -1544,7 +1527,7 @@ function mergePieces(fromRow, fromCol, toRow, toCol) {
   if (newLevel >= 13 && newLevel < MAX_LEVEL) {
     const evolution = CHAINS[currentChain].evolution[newLevel - 1];
     if (evolution) {
-      setTimeout(() => showToast(` Evoluiu para ${evolution.emoji} ${evolution.name}!`), 400);
+      setTimeout(() => showToast(`🎉 Evoluiu para ${evolution.emoji} ${evolution.name}!`), 400);
     }
   }
 }
